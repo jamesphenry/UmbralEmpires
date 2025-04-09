@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using UmbralEmpires.Data;
 
@@ -10,9 +11,11 @@ using UmbralEmpires.Data;
 namespace UmbralEmpires.Data.Migrations
 {
     [DbContext(typeof(UmbralDbContext))]
-    partial class UmbralDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250409072322_AddBaseConstructionPausedFlag")]
+    partial class AddBaseConstructionPausedFlag
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.4");

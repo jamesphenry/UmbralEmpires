@@ -43,7 +43,7 @@ public class UmbralDbContext : DbContext
             entity.HasOne<Astro>()
                   .WithOne()
                   .HasForeignKey<Base>(b => b.AstroId);
-
+            entity.Property(b => b.IsConstructionPaused).HasDefaultValue(false);
             var jsonOptions = new JsonSerializerOptions();
 
             // Configure Dictionary<StructureType, int> as JSON string WITH direct ValueComparer

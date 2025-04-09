@@ -16,6 +16,18 @@ public class Base
     public List<ConstructionQueueItem> ConstructionQueue { get; private set; }
     // Note: The currently *actively building* item might be tracked separately or inferred
 
+    public bool IsConstructionPaused { get; private set; }
+
+    // Add this method within the Base class
+    public void SetConstructionPaused(bool isPaused)
+    {
+        if (IsConstructionPaused != isPaused)
+        {
+            IsConstructionPaused = isPaused;
+            // Optional: Raise Domain Event (ConstructionQueuePaused/Resumed)
+        }
+    }
+
     // --- Constructor for a NEW base ---
     public Base(Guid id, Guid astroId, Guid playerId, string name)
     {
@@ -23,6 +35,7 @@ public class Base
         AstroId = astroId;
         PlayerId = playerId;
         Name = name; // Default name could be generated too
+        IsConstructionPaused = false; // Start not paused
 
         // Initialize with starting structures per GDD 4.4
         Structures = new Dictionary<StructureType, int>
@@ -99,6 +112,7 @@ public class Base
         Name = null!;
         Structures = null!;
         ConstructionQueue = null!;
+        IsConstructionPaused = false;
     }
 }
 

@@ -1,145 +1,75 @@
-﻿// Using statements for DI, Logging, EF Core, Services, Repos, Core types, UI
+﻿// --- File: Program.cs ---
+
+// Using statements (keep relevant ones)
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Terminal.Gui;
-using UmbralEmpires.Application.Persistence; // Repository Interfaces
-using UmbralEmpires.Application.Services;    // Service Interfaces & Impls
-using UmbralEmpires.Application.GameData;   // For StructureDataLookup (if static methods used directly)
-using UmbralEmpires.Data;                    // DbContext
-using UmbralEmpires.Data.Repositories;       // Repository Impls
-using UmbralEmpires.Core.Gameplay;         // For Player, Base etc. (needed for setup/UI logic)
-using UmbralEmpires.Core.World;            // For Astro etc. (needed for setup/UI logic)
+using UmbralEmpires.Application.Persistence;
+using UmbralEmpires.Application.Services;
+using UmbralEmpires.Data;
+using UmbralEmpires.Data.Repositories;
+using UmbralEmpires.Core.Gameplay;
+using UmbralEmpires.Core.World;
+using UmbralEmpires.ConsoleApp.UI; // Include the new UI namespace
 using System;
-using System.Threading.Tasks;                // For Task
+using System.Linq;
+using System.Threading.Tasks;
 
 // --- Dependency Injection Setup ---
 var services = new ServiceCollection();
-
-// 1. Logging
-services.AddLogging(configure => {
-    configure.AddConsole();
-    // configure.SetMinimumLevel(LogLevel.Debug);
-});
-
-// 2. EF Core DbContext
-services.AddDbContext<UmbralDbContext>(); // Scoped lifetime default
-
-// 3. Repositories
+services.AddLogging(configure => configure.AddConsole()); // Simplified
+services.AddDbContext<UmbralDbContext>();
 services.AddScoped<IBaseRepository, BaseRepository>();
 services.AddScoped<IAstroRepository, AstroRepository>();
 services.AddScoped<IPlayerRepository, PlayerRepository>();
-// TODO: Add IUnitOfWork
-
-// 4. Application Services
 services.AddScoped<IBaseStatsCalculatorService, BaseStatsCalculatorService>();
 services.AddScoped<IConstructionService, ConstructionService>();
 services.AddScoped<IGameTimeService, GameTimeService>();
-// TODO: Add IGameSetupService
+// TODO: Add IGameSetupService registration
 
-// Build the Service Provider
 var serviceProvider = services.BuildServiceProvider(validateScopes: true);
 
 // --- Application Initialization ---
 Application.Init();
 
 // --- Main Application Logic ---
+ILogger? logger = null;
+Guid currentPlayerId = Guid.Parse("00000000-0000-0000-0000-000000000001");
+Guid homeBaseId = Guid.Empty;
+
 try
 {
-    var logger = serviceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("Program");
+    logger = serviceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("Program");
     logger.LogInformation("Umbral Empires starting...");
 
-    // --- TODO: Refine Initial Game State Setup ---
-    Guid currentPlayerId = Guid.Parse("00000000-0000-0000-0000-000000000001"); // FIXED ID for M1
+    // --- Ensure Initial Game State ---
+    // This logic *should* move into an IGameSetupService eventually
     using (var setupScope = serviceProvider.CreateScope())
     {
-        var playerRepo = setupScope.ServiceProvider.GetRequiredService<IPlayerRepository>();
-        var dbContext = setupScope.ServiceProvider.GetRequiredService<UmbralDbContext>();
-        var player = await playerRepo.GetByIdAsync(currentPlayerId);
-        if (player == null)
-        {
-            logger.LogInformation("Creating initial player state...");
-            player = new Player(currentPlayerId, "Emperor");
-            await playerRepo.AddAsync(player);
-            // TODO: Create initial Astro and Base here too and save them
-            await dbContext.SaveChangesAsync(); // Save initial state
-        }
+        // (Same initial state check/creation logic as before...)
+        // ... on completion, it sets homeBaseId ...
+        var playerRepo = setupScope.ServiceProvider.GetRequiredService<IPlayerRepository>(); var baseRepo = setupScope.ServiceProvider.GetRequiredService<IBaseRepository>(); var astroRepo = setupScope.ServiceProvider.GetRequiredService<IAstroRepository>(); var dbContext = setupScope.ServiceProvider.GetRequiredService<UmbralDbContext>(); logger.LogInformation("Checking initial game state..."); var player = await playerRepo.GetByIdAsync(currentPlayerId); if (player == null) { player = new Player(currentPlayerId, "Emperor", 500); await playerRepo.AddAsync(player); logger.LogInformation("Created initial player."); }
+        var homeBase = (await baseRepo.GetByPlayerIdAsync(currentPlayerId)).FirstOrDefault(); if (homeBase == null) { logger.LogInformation("Creating initial Astro and Base..."); var coords = new AstroCoordinates("U00", 50, 50, 10); var astro = new Astro(Guid.NewGuid(), coords, TerrainType.Earthly, true, 3, 3, 0, 4, 6, 85); await astroRepo.AddAsync(astro); homeBase = new Base(Guid.NewGuid(), astro.Id, player.Id, "Homeworld"); await baseRepo.AddAsync(homeBase); await dbContext.SaveChangesAsync(); astro.AssignBase(homeBase.Id); await astroRepo.UpdateAsync(astro); await dbContext.SaveChangesAsync(); logger.LogInformation("Initial state created."); } else { logger.LogInformation("Existing game state found."); }
+        homeBaseId = homeBase.Id;
     }
 
-    // --- UI Setup ---
-    var top = Application.Top;
+    if (homeBaseId == Guid.Empty) { throw new Exception("Failed to find or create home base."); }
 
-    var menu = new MenuBar(new MenuBarItem[] {
-        new MenuBarItem ("_File", new MenuItem [] {
-            new MenuItem ("_Quit", "", () => { Application.RequestStop(); }, shortcut: Key.Q | Key.CtrlMask)
-        })
-    });
+    // --- Setup Top Level UI Elements ---
+    var menu = new MenuBar(new MenuBarItem[] { /* ... File->Quit ... */ });
+    var statusMessageItem = new StatusItem(Key.Null, "Status: Initializing...", null);
+    var statusBar = new StatusBar(new StatusItem[] { /* ... Quit shortcut, statusMessageItem ... */ }); // Create StatusBar
 
-    var mainWindow = new Window(" Umbral Empires ") { X = 0, Y = 1, Width = Dim.Fill(), Height = Dim.Fill(1), Border = new Border { BorderStyle = BorderStyle.None } };
-    var statusBar = new StatusBar(new StatusItem[] {
-        new StatusItem(Key.Q | Key.CtrlMask, "~^Q~ Quit", () => Application.RequestStop()),
-        new StatusItem(Key.Null, "Status: Ready", null) // Status message label
-    });
+    // --- Create Main UI Window Instance ---
+    // *** FIX 5: Pass the StatusBar instance ***
+    var mainUI = new MainUserInterface(serviceProvider, currentPlayerId, homeBaseId, statusBar); // Pass statusBar
 
-    var statusFrame = new FrameView("Base Status") { X = 0, Y = 0, Width = Dim.Percent(30), Height = Dim.Fill() };
-    var queueFrame = new FrameView("Construction Queue") { X = Pos.Percent(70), Y = 0, Width = Dim.Percent(30), Height = Dim.Fill() };
-    var structuresFrame = new FrameView("Structures") { X = Pos.Right(statusFrame), Y = 0, Width = Dim.Fill() - Dim.Width(statusFrame) - Dim.Width(queueFrame), Height = Dim.Fill() };
+    // --- Add top-level elements ---
+    Application.Top.Add(menu, mainUI, statusBar); // mainUI is the content window
 
-    // Add Placeholder Content (as before)
-    statusFrame.Add(new Label(1, 1, "Coords: ?")); /* ... other labels ... */
-    structuresFrame.Add(new Label(1, 1, "[Existing Structures List Here]")); /* ... etc ... */
-    queueFrame.Add(new Label(1, 1, "[Queue List Here]"));
-
-    mainWindow.Add(statusFrame, structuresFrame, queueFrame);
-    top.Add(menu, mainWindow, statusBar);
-
-
-    // --- Game Loop Timer ---
-    TimeSpan tickInterval = TimeSpan.FromSeconds(1);
-    double gameHoursPerRealSecond = 1.0;
-
-    object? timerToken = null; // <<< CORRECTED TYPE HERE
-    timerToken = Application.MainLoop.AddTimeout(tickInterval, (mainLoop) => { // Assign to corrected variable
-        _ = Task.Run(async () => { // Run tick logic in background
-            try
-            {
-                using (var scope = serviceProvider.CreateScope()) // Create scope per tick
-                {
-                    var scopedTimeService = scope.ServiceProvider.GetRequiredService<IGameTimeService>();
-                    var dbContext = scope.ServiceProvider.GetRequiredService<UmbralDbContext>();
-
-                    await scopedTimeService.TickAsync(currentPlayerId, tickInterval.TotalSeconds, gameHoursPerRealSecond);
-
-                    // --- Save Changes ---
-                    int changes = await dbContext.SaveChangesAsync();
-                    if (changes > 0)
-                    {
-                        logger.LogDebug("Saved {Count} changes after game tick.", changes);
-                        // Trigger UI refresh maybe? Needs thread safety
-                        // Application.MainLoop.Invoke(() => { /* TODO: UI refresh logic */ });
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Error during game tick processing for Player {PlayerId}", currentPlayerId);
-                // Consider how to handle tick errors - stop timer? Show message?
-                // Application.MainLoop.Invoke(() => { statusBar.Items[1].Title = $"Error: Tick failed!"; });
-            }
-        });
-        return true; // Keep the timer running
-    });
-
-    // --- Run UI ---
-    Application.Run(top); // Blocks until Application.RequestStop()
+    // --- Run Application ---
+    Application.Run(Application.Top);
 
 }
-catch (Exception ex)
-{
-    Console.Error.WriteLine($"Fatal error during application run: {ex}");
-}
-finally
-{
-    // Ensure shutdown is always called
-    Application.Shutdown();
-    Console.ResetColor();
-}
+catch (Exception ex) { Console.Error.WriteLine($"Fatal error: {ex}"); logger?.LogCritical(ex, "Fatal error during application run."); }
+finally { Application.Shutdown(); Console.ResetColor(); }

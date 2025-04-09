@@ -79,59 +79,81 @@ public class GameTimeService : IGameTimeService
 
     private async Task ProcessConstructionQueueAsync(Player player, Base playerBase, CalculatedBaseStats currentStats, double secondsToAdvance)
     {
-        if (playerBase.ConstructionQueue == null || !playerBase.ConstructionQueue.Any()) return;
+        // If queue is empty, ensure not paused and return
+        if (playerBase.ConstructionQueue == null || !playerBase.ConstructionQueue.Any())
+        {
+            if (playerBase.IsConstructionPaused)
+            {
+                playerBase.SetConstructionPaused(false);
+                await _baseRepository.UpdateAsync(playerBase); // Persist unpause state if queue empty
+            }
+            return;
+        }
 
         bool baseStateChanged = false;
         bool playerStateChanged = false;
         double remainingSecondsInTick = secondsToAdvance;
 
+        // Only process if time available and queue has items
         while (remainingSecondsInTick > 0.001 && playerBase.ConstructionQueue.Any())
         {
             var activeItem = playerBase.ConstructionQueue[0];
-            bool itemHasStartedBuilding = activeItem.RemainingBuildTimeSeconds < activeItem.TotalBuildTimeSeconds; // Infer if countdown has begun
+            // Infer if item needs starting procedure (credits check/deduction)
+            bool needsToStart = activeItem.RemainingBuildTimeSeconds >= activeItem.TotalBuildTimeSeconds;
 
-            // --- Check if Paused (Needs Credits to Start/Resume) ---
-            // We infer 'paused' if item is at front but hasn't started (Remaining == Total)
-            // Or if an explicit Pause flag is set (TODO: Add Pause flag to Base entity?)
-            bool requiresCreditCheck = !itemHasStartedBuilding || IsQueuePaused(playerBase); // Check if not started OR explicitly paused
-
-            if (requiresCreditCheck)
+            // --- Check Pause State OR Attempt to Start Item ---
+            if (playerBase.IsConstructionPaused || needsToStart)
             {
                 int requiredCredits = StructureDataLookup.GetCreditCostForLevel(activeItem.StructureType, activeItem.TargetLevel);
                 if (player.Credits >= requiredCredits)
                 {
                     // Can afford to start/resume
-                    if (!itemHasStartedBuilding) // Only deduct credits once when starting
+                    if (needsToStart) // Only deduct credits if it hasn't started yet
                     {
-                        if (player.SpendCredits(requiredCredits)) // Ensure SpendCredits returns bool success
+                        if (player.SpendCredits(requiredCredits))
                         {
                             activeItem.RemainingBuildTimeSeconds = activeItem.TotalBuildTimeSeconds; // Initialize timer
-                            _logger.LogInformation("Starting construction: {Structure} Lvl {Target} at Base {BaseId}",
-                                activeItem.StructureType, activeItem.TargetLevel, playerBase.Id);
+                            _logger.LogInformation("Starting construction: {Structure} Lvl {Target} at Base {BaseId}", activeItem.StructureType, activeItem.TargetLevel, playerBase.Id);
                             playerStateChanged = true;
-                            baseStateChanged = true; // Queue item state changed
+                            baseStateChanged = true;
                         }
                         else
                         {
-                            // Should not happen if Credits >= requiredCredits, but safety check
-                            _logger.LogError("Failed to spend credits despite check passing for Player {PlayerId}", player.Id);
-                            break; // Stop processing if credit spending fails unexpectedly
+                            _logger.LogError("Failed to spend credits for {Structure} Lvl {Target} despite check passing for Player {PlayerId}", activeItem.StructureType, activeItem.TargetLevel, player.Id);
+                            // Should we pause here or just log error and proceed? Let's pause.
+                            playerBase.SetConstructionPaused(true);
+                            baseStateChanged = true;
+                            break; // Stop processing if spend fails unexpectedly
                         }
                     }
-                    SetQueuePaused(playerBase, false); // Ensure queue is not marked as paused
+                    // If we successfully started or resumed, ensure pause flag is off
+                    if (playerBase.IsConstructionPaused)
+                    {
+                        playerBase.SetConstructionPaused(false);
+                        _logger.LogInformation("Construction queue resumed at Base {BaseId}.", playerBase.Id);
+                        baseStateChanged = true;
+                    }
                 }
-                else
+                else // Cannot afford
                 {
-                    // Cannot afford, ensure queue is paused and stop processing for this tick
-                    SetQueuePaused(playerBase, true);
-                    _logger.LogDebug("Construction queue paused at Base {BaseId} (Credits: {Current}/{Required})",
-                        playerBase.Id, player.Credits, requiredCredits);
-                    break;
+                    // Ensure queue is paused and stop processing for this tick
+                    if (!playerBase.IsConstructionPaused)
+                    { // Only log/set if not already paused
+                        playerBase.SetConstructionPaused(true);
+                        _logger.LogInformation("Construction queue PAUSED at Base {BaseId} (Credits: {Current}/{Required})", playerBase.Id, player.Credits, requiredCredits);
+                        baseStateChanged = true;
+                    }
+                    else
+                    {
+                        _logger.LogDebug("Construction queue remains paused at Base {BaseId} (Credits: {Current}/{Required})", playerBase.Id, player.Credits, requiredCredits);
+                    }
+                    break; // Stop processing queue for this tick
                 }
-            }
+            } // End Pause/Start Check
 
-            // If queue is running and item has started...
-            if (!IsQueuePaused(playerBase) && activeItem.RemainingBuildTimeSeconds > 0)
+            // --- Advance Timer (Only if not paused and item has time remaining) ---
+            // Use RemainingBuildTimeSeconds directly, assuming it's initialized correctly above when starting.
+            if (!playerBase.IsConstructionPaused && activeItem.RemainingBuildTimeSeconds > 0.001) // Use epsilon
             {
                 double timeToComplete = activeItem.RemainingBuildTimeSeconds;
                 double timeToApply = Math.Min(remainingSecondsInTick, timeToComplete);
@@ -141,42 +163,29 @@ public class GameTimeService : IGameTimeService
                 baseStateChanged = true; // Queue item state changed
 
                 // --- Check for Completion ---
-                if (activeItem.RemainingBuildTimeSeconds <= 0.001)
+                if (activeItem.RemainingBuildTimeSeconds <= 0.001) // Use epsilon
                 {
-                    _logger.LogInformation("Construction completed: {Structure} Lvl {Target} at Base {BaseId}",
-                        activeItem.StructureType, activeItem.TargetLevel, playerBase.Id);
-
+                    _logger.LogInformation("Construction completed: {Structure} Lvl {Target} at Base {BaseId}", activeItem.StructureType, activeItem.TargetLevel, playerBase.Id);
                     playerBase.CompleteFirstQueueItem(); // Removes item, updates Base.Structures
-
-                    // Immediately loop to potentially start the next item if time remains in tick
+                                                         // Loop will continue to next item if time remains in tick
                 }
             }
-            else if (!IsQueuePaused(playerBase) && activeItem.RemainingBuildTimeSeconds <= 0.001 && playerBase.ConstructionQueue.Any())
+            else if (!playerBase.IsConstructionPaused && playerBase.ConstructionQueue.Any() && activeItem.RemainingBuildTimeSeconds <= 0.001)
             {
-                // This means item completed exactly on previous tick or somehow has 0 time but is still here.
-                // This might happen if CompleteFirstQueueItem wasn't called correctly, or state is odd.
-                // Force completion/removal just in case to avoid infinite loops.
-                _logger.LogWarning("Queue item {Structure} Lvl {Target} had <= 0 time remaining but was still at front. Forcing completion.", activeItem.StructureType, activeItem.TargetLevel);
+                // Catch state where item completed but wasn't removed? Force removal.
+                _logger.LogWarning("Queue item {Structure} Lvl {Target} had <= 0 time but wasn't removed? Forcing completion.", activeItem.StructureType, activeItem.TargetLevel);
                 playerBase.CompleteFirstQueueItem();
                 baseStateChanged = true;
             }
-            else if (!IsQueuePaused(playerBase) && !playerBase.ConstructionQueue.Any())
-            {
-                // Queue became empty during processing (last item completed)
-                break;
-            }
-            // Implicitly handles the case where queue is paused and we break out.
-        }
+            // If paused, or no time left in tick, or queue became empty, loop terminates.
 
-        // Persist changes outside the loop if any occurred
-        if (baseStateChanged)
-        {
-            await _baseRepository.UpdateAsync(playerBase);
-        }
-        if (playerStateChanged)
-        {
-            await _playerRepository.UpdateAsync(player);
-        }
+        } // End While Loop
+
+        // Persist changes outside the loop if any occurred during the tick processing
+        // Use Task.WhenAll for concurrent updates? Or keep sequential? Sequential safer for now.
+        if (baseStateChanged) { await _baseRepository.UpdateAsync(playerBase); }
+        if (playerStateChanged) { await _playerRepository.UpdateAsync(player); }
+        // SaveChangesAsync is called after TickAsync in Program.cs
     }
 
     // Placeholder methods for queue pause state - needs implementation detail (e.g., bool flag on Base?)
