@@ -55,3 +55,4 @@ nunit-*.xml
 
 # Others
 .VS
+/UmbralEmpires.Data/UmbralEmpires.db
