@@ -1,25 +1,35 @@
-﻿using UmbralEmpires.Core.Gameplay;
-using UmbralEmpires.Core.World;
-using System; // For Math.Floor
-using System.Linq; // If needed later for complex lookups
+﻿using UmbralEmpires.Core.Gameplay;         // For Base, StructureType
+using UmbralEmpires.Core.World;            // For Astro
+using UmbralEmpires.Application.GameData;  // For StructureDataLookup
+using System;                             // For Math.Floor
+using System.Linq;                        // Potentially needed later
 
 namespace UmbralEmpires.Application.Services;
 
+// --- Implementation Class ---
 public class BaseStatsCalculatorService : IBaseStatsCalculatorService
 {
-    // Dependencies for tech levels or structure cost data can be injected via constructor later
+    // Dependencies can be injected via constructor later if needed
+    // e.g., constructor(IPlayerTechRepository techRepo, IStructureDataProvider dataProvider)
 
+    /// <summary>
+    /// Calculates the derived statistics for a given Base based on its structures
+    /// and the properties of the Astro it's built on.
+    /// Assumes Tech Levels (Cybernetics, AI) are 0 for Milestone 1.
+    /// </summary>
+    /// <param name="playerBase">The Base entity containing structure levels.</param>
+    /// <param name="astro">The Astro entity containing potentials.</param>
+    /// <returns>A record containing all calculated stats.</returns>
     public CalculatedBaseStats CalculateStats(Base playerBase, Astro astro)
     {
-        // --- Prerequisites (Placeholders - need actual data sources later) ---
-        // We need the player's relevant tech levels for multipliers
-        int cyberneticsLevel = GetPlayerTechLevel(playerBase.PlayerId, TechnologyType.Cybernetics); // Example placeholder
-        int aiLevel = GetPlayerTechLevel(playerBase.PlayerId, TechnologyType.ArtificialIntelligence); // Example placeholder
+        // --- Assumptions for Milestone 1 ---
+        // Fetching actual tech levels would happen here in later milestones
+        int cyberneticsLevel = 0;
+        int aiLevel = 0;
 
-        // We need the Astro's current fertility (considering Biosphere mods)
+        // --- Calculate ---
         int currentAstroFertility = CalculateCurrentAstroFertility(playerBase, astro);
 
-        // --- Calculate Stats using GDD Formulas ---
         int baseEconomy = CalculateBaseEconomy(playerBase, astro);
         int energyProduction = CalculateEnergyProduction(playerBase, astro);
         int energyConsumption = CalculateEnergyConsumption(playerBase);
@@ -47,7 +57,6 @@ public class BaseStatsCalculatorService : IBaseStatsCalculatorService
     }
 
     #region Private Calculation Helpers
-    // --- Implementations based on GDD 4.3 ---
 
     private int CalculateBaseEconomy(Base playerBase, Astro astro)
     {
@@ -59,13 +68,13 @@ public class BaseStatsCalculatorService : IBaseStatsCalculatorService
         economy += GetStructureLevel(playerBase, StructureType.Spaceports) * 2;
         economy += GetStructureLevel(playerBase, StructureType.EconomicCenters) * 3;
         economy += GetStructureLevel(playerBase, StructureType.CommandCenters) * 1;
-        // Capital contribution ignored for now
+        // Ignoring Capital structure for now
         return economy;
     }
 
     private int CalculateEnergyProduction(Base playerBase, Astro astro)
     {
-        int production = 5; // Base
+        int production = 5; // Base production
         production += GetStructureLevel(playerBase, StructureType.SolarPlants) * astro.SolarPotential;
         production += GetStructureLevel(playerBase, StructureType.GasPlants) * astro.GasPotential;
         production += GetStructureLevel(playerBase, StructureType.FusionPlants) * 4;
@@ -77,12 +86,13 @@ public class BaseStatsCalculatorService : IBaseStatsCalculatorService
     private int CalculateEnergyConsumption(Base playerBase)
     {
         int consumption = 0;
+        if (playerBase.Structures == null) return 0;
         foreach (var structureEntry in playerBase.Structures)
         {
-            // Sum the energy cost for *all levels* up to the current level
+            // Get total E cost for all levels up to current level
             consumption += StructureDataLookup.GetTotalEnergyCost(structureEntry.Key, structureEntry.Value);
         }
-        // Add defense consumption later
+        // Note: Defenses also consume energy, need to include if tracked in Base.Structures
         return consumption;
     }
 
@@ -94,7 +104,8 @@ public class BaseStatsCalculatorService : IBaseStatsCalculatorService
         structureBonus += GetStructureLevel(playerBase, StructureType.RoboticFactories) * 2;
         structureBonus += GetStructureLevel(playerBase, StructureType.NaniteFactories) * 4;
         structureBonus += GetStructureLevel(playerBase, StructureType.AndroidFactories) * 6;
-        double multiplier = (1.0 + 0.05 * cyberneticsLevel);
+
+        double multiplier = (1.0 + 0.05 * cyberneticsLevel); // Tech Multiplier
         return (int)Math.Floor((baseValue + structureBonus) * multiplier);
     }
 
@@ -110,7 +121,8 @@ public class BaseStatsCalculatorService : IBaseStatsCalculatorService
         // Specific Production Structures
         structureBonus += GetStructureLevel(playerBase, StructureType.Shipyards) * 2;
         structureBonus += GetStructureLevel(playerBase, StructureType.OrbitalShipyards) * 8;
-        double multiplier = (1.0 + 0.05 * cyberneticsLevel);
+
+        double multiplier = (1.0 + 0.05 * cyberneticsLevel); // Tech Multiplier
         return (int)Math.Floor((baseValue + structureBonus) * multiplier);
     }
 
@@ -118,13 +130,15 @@ public class BaseStatsCalculatorService : IBaseStatsCalculatorService
     {
         int baseValue = 0;
         int structureBonus = GetStructureLevel(playerBase, StructureType.ResearchLabs) * 8;
-        double multiplier = (1.0 + 0.05 * aiLevel);
+
+        double multiplier = (1.0 + 0.05 * aiLevel); // Tech Multiplier
         return (int)Math.Floor((baseValue + structureBonus) * multiplier);
     }
 
     private int CalculateCurrentAstroFertility(Base playerBase, Astro astro)
     {
-        int biosphereBonus = GetStructureLevel(playerBase, StructureType.BiosphereModification);
+        // BaseFertility on Astro should incorporate positional modifiers
+        int biosphereBonus = GetStructureLevel(playerBase, StructureType.BiosphereModification); // Bonus is +1 Fert per level
         return astro.BaseFertility + biosphereBonus;
     }
 
@@ -139,12 +153,13 @@ public class BaseStatsCalculatorService : IBaseStatsCalculatorService
     private int CalculateCurrentPopulationUsed(Base playerBase)
     {
         int used = 0;
+        if (playerBase.Structures == null) return 0;
         foreach (var structureEntry in playerBase.Structures)
         {
-            // Sum population cost for all levels
+            // Get total P cost for all levels up to current level
             used += StructureDataLookup.GetTotalPopulationCost(structureEntry.Key, structureEntry.Value);
         }
-        // Add defense population later
+        // Note: Defenses also use population
         return used;
     }
 
@@ -159,45 +174,27 @@ public class BaseStatsCalculatorService : IBaseStatsCalculatorService
     private int CalculateCurrentAreaUsed(Base playerBase)
     {
         int used = 0;
+        if (playerBase.Structures == null) return 0;
         foreach (var structureEntry in playerBase.Structures)
         {
-            // Sum area cost for all levels
+            // Get total A cost for all levels up to current level
             used += StructureDataLookup.GetTotalAreaCost(structureEntry.Key, structureEntry.Value);
         }
         return used;
     }
 
-    // --- Helpers ---
+    // --- General Helper ---
     private int GetStructureLevel(Base playerBase, StructureType type)
     {
-        return playerBase.Structures.TryGetValue(type, out int level) ? level : 0;
+        // Safely get level from dictionary, return 0 if not found or if Structures is null
+        return playerBase?.Structures?.TryGetValue(type, out int level) ?? false ? level : 0;
     }
 
-    // Placeholder for getting player's tech level - Requires data access/another service
-    private int GetPlayerTechLevel(Guid playerId, TechnologyType techType) => 0; // TODO: Replace with actual implementation
-
-    // Placeholder for accessing static structure data (costs per level)
-    // This data needs to be loaded from config or hardcoded structures
-    private static class StructureDataLookup
-    {
-        // These need to return the SUM of costs for levels 1 to 'level'
-        public static int GetTotalEnergyCost(StructureType type, int level) => 0; // TODO: Implement lookup
-        public static int GetTotalPopulationCost(StructureType type, int level)
-        {
-            // Example: Assume most cost 1 pop per level (exceptions need handling)
-            bool costsPop = type != StructureType.OrbitalShipyards && type != StructureType.Terraform /* ... other exceptions ... */;
-            return costsPop ? level : 0;
-        }
-        public static int GetTotalAreaCost(StructureType type, int level)
-        {
-            // Example: Assume most cost 1 area per level (exceptions need handling)
-            bool costsArea = type != StructureType.OrbitalBase && type != StructureType.OrbitalPlants /* ... other exceptions ... */;
-            return costsArea ? level : 0;
-        }
-    }
+    // Placeholder for getting tech levels - For M1, we assume 0
+    // private int GetPlayerTechLevel(Guid playerId, TechnologyType techType) => 0;
 
     #endregion
 }
 
-// Assumed enum - needs defining in Core
+// Placeholder - Should be defined in Core project
 public enum TechnologyType { Cybernetics, ArtificialIntelligence /*, ... */ }
