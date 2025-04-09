@@ -106,12 +106,33 @@ public class Base
 
 // Represents an item in the queue. Includes calculated build time when added.
 // Actual remaining time needs to be tracked by the game loop/timing service.
-public record ConstructionQueueItem(
-    StructureType StructureType,
-    int TargetLevel,
-    double BuildTimeSeconds // Store the calculated total build time
-                            // We might add Priority or other fields later if needed
-);
+public class ConstructionQueueItem // Changed from record to class
+{
+    // Properties set when item is created/queued
+    public StructureType StructureType { get; init; }
+    public int TargetLevel { get; init; }
+    public double TotalBuildTimeSeconds { get; init; } // Calculated when added to queue
+
+    // Mutable property to track build progress
+    public double RemainingBuildTimeSeconds { get; set; }
+
+    // Constructor used when adding to queue
+    public ConstructionQueueItem(StructureType structureType, int targetLevel, double totalBuildTimeSeconds)
+    {
+        StructureType = structureType;
+        TargetLevel = targetLevel;
+        TotalBuildTimeSeconds = totalBuildTimeSeconds;
+        // Initialize Remaining time - it starts counting down only when active build begins
+        RemainingBuildTimeSeconds = totalBuildTimeSeconds;
+    }
+
+    // Parameterless constructor potentially needed for EF Core JSON deserialization
+    private ConstructionQueueItem()
+    {
+        // Initialize properties to non-null default if required by compiler/deserializer
+        StructureType = default!; // Or a specific default if appropriate
+    }
+}
 
 // Enum for all structure & defense types (assuming they use the same build queue)
 // Needs to be comprehensive based on GDD Tables 6.2 and 6.4
