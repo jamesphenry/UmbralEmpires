@@ -79,73 +79,103 @@ public class GameTimeService : IGameTimeService
 
     private async Task ProcessConstructionQueueAsync(Player player, Base playerBase, CalculatedBaseStats currentStats, double secondsToAdvance)
     {
-        if (playerBase.ConstructionQueue == null || playerBase.ConstructionQueue.Count == 0) return;
-
-        // Need to track remaining time persistently. Let's add it to ConstructionQueueItem record.
-        // Modify ConstructionQueueItem: record(..., double TotalBuildTimeSeconds, double RemainingBuildTimeSeconds);
+        if (playerBase.ConstructionQueue == null || !playerBase.ConstructionQueue.Any()) return;
 
         bool baseStateChanged = false;
+        bool playerStateChanged = false;
         double remainingSecondsInTick = secondsToAdvance;
 
-        while (remainingSecondsInTick > 0.001 && playerBase.ConstructionQueue.Count > 0) // Use small epsilon
+        while (remainingSecondsInTick > 0.001 && playerBase.ConstructionQueue.Any())
         {
             var activeItem = playerBase.ConstructionQueue[0];
+            bool itemHasStartedBuilding = activeItem.RemainingBuildTimeSeconds < activeItem.TotalBuildTimeSeconds; // Infer if countdown has begun
 
-            // Check if queue is paused (e.g., needs credits)
-            if (IsQueuePaused(playerBase)) // Need mechanism to check/set pause state
+            // --- Check if Paused (Needs Credits to Start/Resume) ---
+            // We infer 'paused' if item is at front but hasn't started (Remaining == Total)
+            // Or if an explicit Pause flag is set (TODO: Add Pause flag to Base entity?)
+            bool requiresCreditCheck = !itemHasStartedBuilding || IsQueuePaused(playerBase); // Check if not started OR explicitly paused
+
+            if (requiresCreditCheck)
             {
-                // Attempt to restart if credits now sufficient
                 int requiredCredits = StructureDataLookup.GetCreditCostForLevel(activeItem.StructureType, activeItem.TargetLevel);
                 if (player.Credits >= requiredCredits)
                 {
-                    player.SpendCredits(requiredCredits); // Need method on Player
-                    SetQueuePaused(playerBase, false); // Unpause
-                                                       // Mark activeItem as started if not already? How to track? Maybe Remaining = Total if just starting.
-                    if (activeItem.RemainingBuildTimeSeconds <= 0) // Check if it hasn't started counting down
-                        activeItem.RemainingBuildTimeSeconds = activeItem.TotalBuildTimeSeconds;
-
-                    _logger.LogInformation("Construction queue resumed at Base {BaseId}.", playerBase.Id);
-                    baseStateChanged = true;
+                    // Can afford to start/resume
+                    if (!itemHasStartedBuilding) // Only deduct credits once when starting
+                    {
+                        if (player.SpendCredits(requiredCredits)) // Ensure SpendCredits returns bool success
+                        {
+                            activeItem.RemainingBuildTimeSeconds = activeItem.TotalBuildTimeSeconds; // Initialize timer
+                            _logger.LogInformation("Starting construction: {Structure} Lvl {Target} at Base {BaseId}",
+                                activeItem.StructureType, activeItem.TargetLevel, playerBase.Id);
+                            playerStateChanged = true;
+                            baseStateChanged = true; // Queue item state changed
+                        }
+                        else
+                        {
+                            // Should not happen if Credits >= requiredCredits, but safety check
+                            _logger.LogError("Failed to spend credits despite check passing for Player {PlayerId}", player.Id);
+                            break; // Stop processing if credit spending fails unexpectedly
+                        }
+                    }
+                    SetQueuePaused(playerBase, false); // Ensure queue is not marked as paused
                 }
                 else
                 {
-                    _logger.LogDebug("Construction queue remains paused at Base {BaseId} (Credits: {Current}/{Required})",
-                       playerBase.Id, player.Credits, requiredCredits);
-                    break; // Can't proceed, stop processing queue for this tick
+                    // Cannot afford, ensure queue is paused and stop processing for this tick
+                    SetQueuePaused(playerBase, true);
+                    _logger.LogDebug("Construction queue paused at Base {BaseId} (Credits: {Current}/{Required})",
+                        playerBase.Id, player.Credits, requiredCredits);
+                    break;
                 }
             }
 
-            // If it was just unpaused or already running
-            if (activeItem.RemainingBuildTimeSeconds <= 0) activeItem.RemainingBuildTimeSeconds = activeItem.TotalBuildTimeSeconds; // Ensure timer starts if needed
-
-
-            // Process active item
-            double timeToComplete = activeItem.RemainingBuildTimeSeconds;
-            double timeToApply = Math.Min(remainingSecondsInTick, timeToComplete);
-
-            activeItem.RemainingBuildTimeSeconds -= timeToApply;
-            remainingSecondsInTick -= timeToApply;
-            baseStateChanged = true;
-
-            // Check for completion
-            if (activeItem.RemainingBuildTimeSeconds <= 0.001) // Use epsilon
+            // If queue is running and item has started...
+            if (!IsQueuePaused(playerBase) && activeItem.RemainingBuildTimeSeconds > 0)
             {
-                _logger.LogInformation("Construction completed: {Structure} Level {Level} at Base {BaseId}",
-                    activeItem.StructureType, activeItem.TargetLevel, playerBase.Id);
+                double timeToComplete = activeItem.RemainingBuildTimeSeconds;
+                double timeToApply = Math.Min(remainingSecondsInTick, timeToComplete);
 
-                playerBase.CompleteFirstQueueItem(); // Updates Structures dict, removes from queue
+                activeItem.RemainingBuildTimeSeconds -= timeToApply;
+                remainingSecondsInTick -= timeToApply;
+                baseStateChanged = true; // Queue item state changed
 
-                // Invalidation check/handling might be needed here or before starting next
+                // --- Check for Completion ---
+                if (activeItem.RemainingBuildTimeSeconds <= 0.001)
+                {
+                    _logger.LogInformation("Construction completed: {Structure} Lvl {Target} at Base {BaseId}",
+                        activeItem.StructureType, activeItem.TargetLevel, playerBase.Id);
 
-                // No need to explicitly start next item here; loop will handle it if time remains
+                    playerBase.CompleteFirstQueueItem(); // Removes item, updates Base.Structures
+
+                    // Immediately loop to potentially start the next item if time remains in tick
+                }
             }
-            // If item did not complete, loop continues with reduced remainingSecondsInTick
-            // If item did complete, loop continues and will check next item (if any)
+            else if (!IsQueuePaused(playerBase) && activeItem.RemainingBuildTimeSeconds <= 0.001 && playerBase.ConstructionQueue.Any())
+            {
+                // This means item completed exactly on previous tick or somehow has 0 time but is still here.
+                // This might happen if CompleteFirstQueueItem wasn't called correctly, or state is odd.
+                // Force completion/removal just in case to avoid infinite loops.
+                _logger.LogWarning("Queue item {Structure} Lvl {Target} had <= 0 time remaining but was still at front. Forcing completion.", activeItem.StructureType, activeItem.TargetLevel);
+                playerBase.CompleteFirstQueueItem();
+                baseStateChanged = true;
+            }
+            else if (!IsQueuePaused(playerBase) && !playerBase.ConstructionQueue.Any())
+            {
+                // Queue became empty during processing (last item completed)
+                break;
+            }
+            // Implicitly handles the case where queue is paused and we break out.
         }
 
+        // Persist changes outside the loop if any occurred
         if (baseStateChanged)
         {
-            await _baseRepository.UpdateAsync(playerBase); // Persist changes to Base (Queue, Structures)
+            await _baseRepository.UpdateAsync(playerBase);
+        }
+        if (playerStateChanged)
+        {
+            await _playerRepository.UpdateAsync(player);
         }
     }
 
@@ -155,27 +185,3 @@ public class GameTimeService : IGameTimeService
 }
 
 
-// --- Need Player entity and IPlayerRepository ---
-public class Player
-{
-    public Guid Id { get; set; }
-    public int Credits { get; private set; }
-    public void AddCredits(int amount) { if (amount > 0) Credits += amount; }
-    public bool SpendCredits(int amount)
-    {
-        if (amount > 0 && Credits >= amount) { Credits -= amount; return true; }
-        return false;
-    }
-}
-public interface IPlayerRepository
-{
-    Task<Player?> GetByIdAsync(Guid id);
-    Task UpdateAsync(Player player);
-}
-// --- Need Updated ConstructionQueueItem ---
-// public record ConstructionQueueItem(
-//     StructureType StructureType,
-//     int TargetLevel,
-//     double TotalBuildTimeSeconds,
-//     double RemainingBuildTimeSeconds // Added for persistent tracking
-// );

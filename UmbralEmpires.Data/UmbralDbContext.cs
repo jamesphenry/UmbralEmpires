@@ -13,6 +13,7 @@ public class UmbralDbContext : DbContext
     // --- DbSets ---
     public DbSet<Astro> Astros { get; set; } = null!;
     public DbSet<Base> Bases { get; set; } = null!;
+    public DbSet<Player> Players { get; set; } = null!;
 
     // --- Configuration ---
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
@@ -68,6 +69,14 @@ public class UmbralDbContext : DbContext
                    ));
 
             entity.HasIndex(b => b.PlayerId);
+        });
+
+        // ----- Player Entity Configuration -----
+        modelBuilder.Entity<Player>(entity =>
+        {
+            entity.HasKey(p => p.Id);
+            entity.Property(p => p.Name).IsRequired().HasMaxLength(50);
+            // Credits property maps automatically by convention
         });
     }
 }
