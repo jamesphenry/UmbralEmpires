@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\UmbralEmpires.Application\UmbralEmpires.Application.csproj" />
+    <ProjectReference Include="..\UmbralEmpires.Data\UmbralEmpires.Data.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -9,6 +10,7 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="9.0.4" />
     <PackageReference Include="Terminal.Gui" Version="1.18.0" />
   </ItemGroup>
 
