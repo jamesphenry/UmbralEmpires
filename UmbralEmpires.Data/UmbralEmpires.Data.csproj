@@ -1,6 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
+    <ProjectReference Include="..\UmbralEmpires.Application\UmbralEmpires.Application.csproj" />
     <ProjectReference Include="..\UmbralEmpires.Core\UmbralEmpires.Core.csproj" />
   </ItemGroup>
 
