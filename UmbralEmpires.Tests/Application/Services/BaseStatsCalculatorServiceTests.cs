@@ -295,4 +295,50 @@ public class BaseStatsCalculatorServiceTests
         Assert.Equal(expectedMaxArea, result.MaxArea);
         Assert.Equal(expectedAreaUsed, result.CurrentAreaUsed);
     }
+
+    [Fact]
+    public void CalculateStats_WithTerraform_UpdatesArea()
+    {
+        // Arrange ---
+        var astroId = Guid.NewGuid();
+        var coords = new AstroCoordinates("U00", 50, 50, 10);
+        // Earthly: Metal:3, Gas:3, Cry:0, Sol:4, Fert:6, Area:85
+        var startingAstro = new Astro(astroId, coords, TerrainType.Earthly, true, 3, 3, 0, 4, 6, 85); // BaseArea = 85
+
+        var playerId = Guid.NewGuid();
+        var baseId = Guid.NewGuid();
+        var playerBase = new Base(baseId, astroId, playerId, "Homeworld"); // Starts with Lvl 1 Urban
+
+        // *** Add Level 1 Terraform ***
+        playerBase.SetStructureLevel(StructureType.Terraform, 1);
+
+        // Expected values (Initial + Lvl 1 Terraform)
+        // Urban: E:0 P:1 A:1
+        // Terraform: E:0 P:0 A:0 | MaxArea += Lvl * 5
+        int expectedEconomy = 0;
+        int expectedEnergyProd = 5;
+        int expectedEnergyCons = 0 + 0;   // Urban(0) + Terraform(0) = 0
+        int expectedConstrCap = 15;       // No change
+        int expectedProdCap = 0;          // No change
+        int expectedResearchCap = 0;      // No change
+        int expectedMaxPop = 6;           // No change
+        int expectedPopUsed = 1 + 0;      // Urban(1) + Terraform(0) = 1
+        int expectedMaxArea = 85 + (1 * 5); // Base(85) + Lvl 1 Terraform(+5) = 90
+        int expectedAreaUsed = 1 + 0;     // Urban(1) + Terraform(0) = 1
+
+        // Act ---
+        var result = _sut.CalculateStats(playerBase, startingAstro);
+
+        // Assert ---
+        Assert.Equal(expectedEconomy, result.BaseEconomy);
+        Assert.Equal(expectedEnergyProd, result.EnergyProduction);
+        Assert.Equal(expectedEnergyCons, result.EnergyConsumption);
+        Assert.Equal(expectedConstrCap, result.ConstructionCapacity);
+        Assert.Equal(expectedProdCap, result.ProductionCapacity);
+        Assert.Equal(expectedResearchCap, result.ResearchCapacity);
+        Assert.Equal(expectedMaxPop, result.MaxPopulation);
+        Assert.Equal(expectedPopUsed, result.CurrentPopulationUsed);
+        Assert.Equal(expectedMaxArea, result.MaxArea); // Verify MaxArea increased
+        Assert.Equal(expectedAreaUsed, result.CurrentAreaUsed); // Verify AreaUsed didn't increase
+    }
 }
