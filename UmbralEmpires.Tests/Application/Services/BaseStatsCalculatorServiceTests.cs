@@ -341,4 +341,50 @@ public class BaseStatsCalculatorServiceTests
         Assert.Equal(expectedMaxArea, result.MaxArea); // Verify MaxArea increased
         Assert.Equal(expectedAreaUsed, result.CurrentAreaUsed); // Verify AreaUsed didn't increase
     }
+
+    [Fact]
+    public void CalculateStats_WithCybernetics_AppliesMultiplier()
+    {
+        // Arrange
+        var astro = new Astro(Guid.NewGuid(), new AstroCoordinates("U00", 1, 1, 1), TerrainType.Earthly, true, 3, 0, 0, 0, 6, 85); // Metal = 3
+        var playerBase = new Base(Guid.NewGuid(), astro.Id, Guid.NewGuid(), "Test");
+        playerBase.SetStructureLevel(StructureType.MetalRefineries, 1); // Base Const Bonus = 1*3=3, Base Prod Bonus = 1*3=3
+
+        int cyberneticsLevel = 1; // Test Level 1 Cybernetics (+5%)
+        int aiLevel = 0;
+
+        // Expected Capacities with +5% multiplier
+        int expectedConstrCap = (int)Math.Floor((15.0 + 3.0) * (1.0 + 0.05 * 1.0)); // (15+3)*1.05 = 18.9 -> 18
+        int expectedProdCap = (int)Math.Floor((0.0 + 3.0) * (1.0 + 0.05 * 1.0));   // (0+3)*1.05 = 3.15 -> 3
+
+        // Act
+        var result = _sut.CalculateStats(playerBase, astro, cyberneticsLevel, aiLevel);
+
+        // Assert
+        Assert.Equal(expectedConstrCap, result.ConstructionCapacity);
+        Assert.Equal(expectedProdCap, result.ProductionCapacity);
+    }
+
+    [Fact]
+    public void CalculateStats_WithAI_AppliesMultiplier()
+    {
+        // Arrange
+        var astro = new Astro(Guid.NewGuid(), new AstroCoordinates("U00", 1, 1, 1), TerrainType.Earthly, true, 0, 0, 0, 0, 6, 85);
+        var playerBase = new Base(Guid.NewGuid(), astro.Id, Guid.NewGuid(), "Test");
+        playerBase.SetStructureLevel(StructureType.ResearchLabs, 1); // Base Research Bonus = 1*8=8
+
+        int cyberneticsLevel = 0;
+        int aiLevel = 2; // Test Level 2 AI (+10%)
+
+        // Expected Capacity with +10% multiplier
+        int expectedResearchCap = (int)Math.Floor((0.0 + 8.0) * (1.0 + 0.05 * 2.0)); // (0+8)*1.1 = 8.8 -> 8
+
+        // Act
+        var result = _sut.CalculateStats(playerBase, astro, cyberneticsLevel, aiLevel);
+
+        // Assert
+        Assert.Equal(expectedResearchCap, result.ResearchCapacity);
+    }
+
+
 }

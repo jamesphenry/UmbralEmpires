@@ -22,5 +22,9 @@ public interface IBaseStatsCalculatorService
 {
     // Takes the Base state and its Astro's properties
     // May need access to Player's researched tech levels as well
-    CalculatedBaseStats CalculateStats(Base playerBase, Astro astro /*, PlayerTechLevels techLevels? */);
+    //CalculatedBaseStats CalculateStats(Base playerBase, Astro astro /*, PlayerTechLevels techLevels? */);
+
+    // ***MODIFIED***: Added tech level parameters
+    CalculatedBaseStats CalculateStats(Base playerBase, Astro astro, int cyberneticsLevel = 0, int aiLevel = 0);
+
 }
