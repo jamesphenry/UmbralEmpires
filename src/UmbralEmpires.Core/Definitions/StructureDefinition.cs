@@ -14,4 +14,5 @@ public record StructureDefinition
     public int EconomyBonus { get; init; }
     public bool IsAdvanced { get; init; }
     public int BaseConstructionBonus { get; init; }
+    public int BaseProductionBonus { get; init; }
 }
