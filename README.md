@@ -6,6 +6,20 @@
 ## Test Results
 
 <!-- TEST-RESULTS-START -->
-<!-- The GitHub Action will inject/update detailed test results here -->
+# Test Run Report ($((Get-Date).ToString('yyyy-MM-dd HH:mm:ss')) UTC)
+
+## Summary
+* **Overall Outcome:** Completed
+* Total Tests: 1
+* Passed: 1
+* Failed: 0
+
+## Details
+
+### [](#)
+| Test Name | Outcome | Duration (ms) | Error Message |
+|-----------|---------|---------------|---------------|
+| LoadStructures_Should_Load_Single_Simple_Structure_From_Json | Passed | 0 | - |
+
 <!-- TEST-RESULTS-END -->
 
