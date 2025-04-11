@@ -398,10 +398,10 @@ namespace UmbralEmpires.Tests.DataLoading
                 "Id": "MetalRefineries",
                 "Name": "Metal Refineries",
                 "BaseCreditsCost": 1,
-                "EnergyRequirementPerLevel": 0, // Assuming 0 default
+                "EnergyRequirementPerLevel": 0, 
                 "PopulationRequirementPerLevel": 1,
                 "AreaRequirementPerLevel": 1,
-                "RequiresTechnology": [], // Assuming none
+                "RequiresTechnology": [],
                 "EconomyBonus": 1
               }
             ]
