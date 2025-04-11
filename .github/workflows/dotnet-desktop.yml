@@ -45,12 +45,106 @@ jobs:
         fail-on-error: 'false'
 
     - name: Parse Test Results and Update README with Detailed Report
-      if: always()  # <-- ✅ this is the fix
+      if: steps.tests.outcome == 'success' || steps.tests.outcome == 'failure'
       shell: pwsh
       run: |
-        # (your PowerShell script remains exactly the same)
-        # just keeping this short for clarity
-        # the only change is 'if: always()'
+        $trxFiles = Get-ChildItem -Path . -Recurse -Filter "test-results.trx" | Select-Object -First 1
+        if ($null -eq $trxFiles) {
+          Write-Error "Test results file (test-results.trx) not found."
+          exit 1
+        }
+
+        [xml]$trx = Get-Content $trxFiles.FullName
+        $summary = $trx.TestRun.ResultSummary
+        $counters = $summary.Counters
+
+        $total = [int]$counters.total
+        $passed = [int]$counters.passed
+        $failed = [int]$counters.failed
+        $skipped = [int]($counters.skipped ?? 0)
+
+        $outcome = if ($failed -gt 0) { "Failed" } elseif ($passed -eq $total) { "Passed" } else { "Mixed" }
+
+        $detailedReport = "# Test Run Report ($(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') UTC)"
+        $detailedReport += "`n`n## Summary`n"
+        $detailedReport += "* **Overall Outcome:** $outcome`n"
+        $detailedReport += "* Total Tests: $total`n"
+        $detailedReport += "* Passed: $passed`n"
+        $detailedReport += "* Failed: $failed`n"
+        $detailedReport += "* Skipped: $skipped`n"
+
+        $results = $trx.TestRun.Results.UnitTestResult
+        if ($null -ne $results -and $results.GetType().Name -ne 'Object[]') { $results = @($results) }
+
+        $detailedReport += "`n## Details`n"
+
+        if ($null -ne $results) {
+          $grouped = $results | Group-Object {
+            ($_?.testName -split '\.')[-2..-1] -join '.'
+          }
+
+          foreach ($group in $grouped | Sort-Object Name) {
+            $groupName = $group.Name
+            $nsParts = $groupName -split '\.'
+            $className = $nsParts[-1]
+            $filename = "$className.cs"
+            $githubRepoUrl = "https://github.com/${{ github.repository }}"
+            $fileMatch = Get-ChildItem -Recurse -File -Filter $filename | Select-Object -First 1
+            $fileUrl = if ($fileMatch) { "$githubRepoUrl/blob/main/$($fileMatch.FullName -replace '\\','/' -replace '^.*?/', '')" } else { "#" }
+
+            $detailedReport += "`n### [$groupName]($fileUrl)`n"
+            $detailedReport += "| Test Name | Outcome | Duration (ms) | Error Message |`n"
+            $detailedReport += "|-----------|---------|---------------|---------------|`n"
+
+            foreach ($result in $group.Group) {
+              $shortName = ($result.testName -split '\.')[-1]
+              $testOutcome = $result.outcome
+              $durationMs = 0
+              try { $durationMs = [math]::Round(($result.duration | ConvertTo-TimeSpan).TotalMilliseconds) } catch {}
+              $errorMessage = "-"
+              if ($result.Output.ErrorInfo) {
+                $errorMessage = ($result.Output.ErrorInfo.Message | Out-String).Trim() `
+                  -replace '\|','\|' `
+                  -replace "`n","<br>" `
+                  -replace "`r",""
+              }
+              $detailedReport += "| $($shortName -replace '\|','\|') | $testOutcome | $durationMs | $errorMessage |`n"
+            }
+          }
+        } else {
+          $detailedReport += "`n(No test results found)`n"
+        }
+
+        $readmeFile = "README.md"
+        $startMarker = "<!-- TEST-RESULTS-START -->"
+        $endMarker = "<!-- TEST-RESULTS-END -->"
+
+        try {
+          $readmeContent = Get-Content $readmeFile -Raw
+        } catch {
+          Write-Error "Error reading README file '$readmeFile': $_"
+          exit 1
+        }
+
+        $startIndex = $readmeContent.IndexOf($startMarker)
+        $endIndex = $readmeContent.IndexOf($endMarker)
+
+        if ($startIndex -eq -1 -or $endIndex -eq -1 -or $startIndex -ge $endIndex) {
+          Write-Error "Start ('$startMarker') / End ('$endMarker') markers not found or invalid in $readmeFile."
+          exit 1
+        }
+
+        $startContent = $readmeContent.Substring(0, $startIndex + $startMarker.Length)
+        $endContent = $readmeContent.Substring($endIndex)
+        $finalContent = $startContent + "`n" + $detailedReport + "`n" + $endContent
+
+        try {
+          Set-Content -Path $readmeFile -Value $finalContent -NoNewline -Encoding UTF8
+          Write-Host "$readmeFile updated successfully with detailed report."
+        } catch {
+          Write-Error "Error writing updated content to '$readmeFile': $_"
+          exit 1
+        }
 
     - name: Commit and Push README changes
       if: success() && github.ref == 'refs/heads/main' && github.event_name == 'push'
