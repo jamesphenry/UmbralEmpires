@@ -795,5 +795,320 @@ namespace UmbralEmpires.Tests.DataLoading
             // --- TEMPORARY Assert if needed ---
             // Assert.True(false, "Verify UsesGas flag is loaded.");
         }
+
+        [Fact]
+        public void LoadStructures_Should_Load_UsesCrystal_Flag()
+        {
+            // Arrange -----
+            // Using Crystal Mines which should use Crystal potential for Economy bonus
+            var jsonInput = """
+            [
+              {
+                "Id": "CrystalMines",
+                "Name": "Crystal Mines",
+                "BaseCreditsCost": 2,
+                "EnergyRequirementPerLevel": 0,
+                "PopulationRequirementPerLevel": 1,
+                "AreaRequirementPerLevel": 1,
+                "RequiresTechnology": [],
+                "EconomyBonus": 0,
+                "IsAdvanced": false,
+                "BaseConstructionBonus": 0,
+                "BaseProductionBonus": 0,
+                "BaseResearchBonus": 0,
+                "UsesMetal": false,
+                "UsesGas": false,
+                "UsesCrystal": true
+              }
+            ]
+            """;
+
+            var expectedStructure = new StructureDefinition
+            {
+                Id = "CrystalMines",
+                Name = "Crystal Mines",
+                BaseCreditsCost = 2,
+                EnergyRequirementPerLevel = 0,
+                PopulationRequirementPerLevel = 1,
+                AreaRequirementPerLevel = 1,
+                RequiresTechnology = new List<TechRequirement>(),
+                EconomyBonus = 0,
+                IsAdvanced = false,
+                BaseConstructionBonus = 0,
+                BaseProductionBonus = 0,
+                BaseResearchBonus = 0,
+                UsesMetal = false,
+                UsesGas = false,
+                UsesCrystal = true // Expecting this value
+            };
+
+            IDefinitionLoader loader = new JsonDefinitionLoader();
+
+            // Act -----
+            IEnumerable<StructureDefinition> result = loader.LoadStructures(jsonInput);
+
+            // Assert -----
+            result.Should().NotBeNull();
+            result.Should().ContainSingle().Which.Should().BeEquivalentTo(expectedStructure);
+
+            // --- TEMPORARY Assert if needed ---
+            // Assert.True(false, "Verify UsesCrystal flag is loaded.");
+        }
+
+        [Fact]
+        public void LoadStructures_Should_Load_UsesSolar_Flag()
+        {
+            // Arrange -----
+            // Using Solar Plants which should use Solar potential for Energy bonus
+            var jsonInput = """
+            [
+              {
+                "Id": "SolarPlants",
+                "Name": "Solar Plants",
+                "BaseCreditsCost": 1,
+                "EnergyRequirementPerLevel": 0,
+                "PopulationRequirementPerLevel": 0,
+                "AreaRequirementPerLevel": 1,
+                "RequiresTechnology": [],
+                "EconomyBonus": 0,
+                "IsAdvanced": false,
+                "BaseConstructionBonus": 0,
+                "BaseProductionBonus": 0,
+                "BaseResearchBonus": 0,
+                "UsesMetal": false,
+                "UsesGas": false,
+                "UsesCrystal": false,
+                "UsesSolar": true
+              }
+            ]
+            """;
+
+            var expectedStructure = new StructureDefinition
+            {
+                Id = "SolarPlants",
+                Name = "Solar Plants",
+                BaseCreditsCost = 1,
+                EnergyRequirementPerLevel = 0,
+                PopulationRequirementPerLevel = 0,
+                AreaRequirementPerLevel = 1,
+                RequiresTechnology = new List<TechRequirement>(),
+                EconomyBonus = 0,
+                IsAdvanced = false,
+                BaseConstructionBonus = 0,
+                BaseProductionBonus = 0,
+                BaseResearchBonus = 0,
+                UsesMetal = false,
+                UsesGas = false,
+                UsesCrystal = false,
+                UsesSolar = true // Expecting this value
+            };
+
+            IDefinitionLoader loader = new JsonDefinitionLoader();
+
+            // Act -----
+            IEnumerable<StructureDefinition> result = loader.LoadStructures(jsonInput);
+
+            // Assert -----
+            result.Should().NotBeNull();
+            result.Should().ContainSingle().Which.Should().BeEquivalentTo(expectedStructure);
+
+            // --- TEMPORARY Assert if needed ---
+            // Assert.True(false, "Verify UsesSolar flag is loaded.");
+        }
+
+        [Fact]
+        public void LoadStructures_Should_Load_AddsPopCapacityByFertility_Flag()
+        {
+            // Arrange -----
+            // Using Urban Structures which use this mechanic
+            var jsonInput = """
+            [
+              {
+                "Id": "UrbanStructures",
+                "Name": "Urban Structures",
+                "BaseCreditsCost": 1,
+                "EnergyRequirementPerLevel": 0,
+                "PopulationRequirementPerLevel": 0,
+                "AreaRequirementPerLevel": 1,
+                "RequiresTechnology": [],
+                "EconomyBonus": 0,
+                "IsAdvanced": false,
+                "BaseConstructionBonus": 0,
+                "BaseProductionBonus": 0,
+                "BaseResearchBonus": 0,
+                "UsesMetal": false,
+                "UsesGas": false,
+                "UsesCrystal": false,
+                "UsesSolar": false,
+                "AddsPopCapacityByFertility": true
+              }
+            ]
+            """;
+
+            var expectedStructure = new StructureDefinition
+            {
+                Id = "UrbanStructures",
+                Name = "Urban Structures",
+                BaseCreditsCost = 1,
+                EnergyRequirementPerLevel = 0,
+                PopulationRequirementPerLevel = 0,
+                AreaRequirementPerLevel = 1,
+                RequiresTechnology = new List<TechRequirement>(),
+                EconomyBonus = 0,
+                IsAdvanced = false,
+                BaseConstructionBonus = 0,
+                BaseProductionBonus = 0,
+                BaseResearchBonus = 0,
+                UsesMetal = false,
+                UsesGas = false,
+                UsesCrystal = false,
+                UsesSolar = false,
+                AddsPopCapacityByFertility = true // Expecting this value
+            };
+
+            IDefinitionLoader loader = new JsonDefinitionLoader();
+
+            // Act -----
+            IEnumerable<StructureDefinition> result = loader.LoadStructures(jsonInput);
+
+            // Assert -----
+            result.Should().NotBeNull();
+            result.Should().ContainSingle().Which.Should().BeEquivalentTo(expectedStructure);
+
+            // --- TEMPORARY Assert if needed ---
+            // Assert.True(false, "Verify AddsPopCapacityByFertility flag is loaded.");
+        }
+
+        [Fact]
+        public void LoadStructures_Should_Load_AreaCapacityBonus()
+        {
+            // Arrange -----
+            // Using Terraform which adds 5 Area according to GDD Structure List
+            var jsonInput = """
+            [
+              {
+                "Id": "Terraform",
+                "Name": "Terraform",
+                "BaseCreditsCost": 80,
+                "EnergyRequirementPerLevel": 0,
+                "PopulationRequirementPerLevel": 0,
+                "AreaRequirementPerLevel": 0,
+                "RequiresTechnology": [ { "TechId": "Computer", "Level": 10 }, { "TechId": "Energy", "Level": 10 } ],
+                "EconomyBonus": 0,
+                "IsAdvanced": true,
+                "BaseConstructionBonus": 0,
+                "BaseProductionBonus": 0,
+                "BaseResearchBonus": 0,
+                "UsesMetal": false,
+                "UsesGas": false,
+                "UsesCrystal": false,
+                "UsesSolar": false,
+                "AddsPopCapacityByFertility": false,
+                "AreaCapacityBonus": 5
+              }
+            ]
+            """;
+
+            var expectedStructure = new StructureDefinition
+            {
+                Id = "Terraform",
+                Name = "Terraform",
+                BaseCreditsCost = 80,
+                EnergyRequirementPerLevel = 0,
+                PopulationRequirementPerLevel = 0,
+                AreaRequirementPerLevel = 0,
+                RequiresTechnology = new List<TechRequirement> { new("Computer", 10), new("Energy", 10) },
+                EconomyBonus = 0,
+                IsAdvanced = true,
+                BaseConstructionBonus = 0,
+                BaseProductionBonus = 0,
+                BaseResearchBonus = 0,
+                UsesMetal = false,
+                UsesGas = false,
+                UsesCrystal = false,
+                UsesSolar = false,
+                AddsPopCapacityByFertility = false,
+                AreaCapacityBonus = 5 // Expecting this value
+            };
+
+            IDefinitionLoader loader = new JsonDefinitionLoader();
+
+            // Act -----
+            IEnumerable<StructureDefinition> result = loader.LoadStructures(jsonInput);
+
+            // Assert -----
+            result.Should().NotBeNull();
+            result.Should().ContainSingle().Which.Should().BeEquivalentTo(expectedStructure);
+
+            // --- TEMPORARY Assert if needed ---
+            // Assert.True(false, "Verify AreaCapacityBonus is loaded.");
+        }
+
+        [Fact]
+        public void LoadStructures_Should_Load_IncreasesAstroFertility_Flag()
+        {
+            // Arrange -----
+            // Using Biosphere Modification which should have this flag set
+            var jsonInput = """
+            [
+              {
+                "Id": "BiosphereModification",
+                "Name": "Biosphere Modification",
+                "BaseCreditsCost": 20000,
+                "EnergyRequirementPerLevel": 0,
+                "PopulationRequirementPerLevel": 0,
+                "AreaRequirementPerLevel": 0,
+                "RequiresTechnology": [ { "TechId": "Computer", "Level": 24 }, { "TechId": "Energy", "Level": 24 } ],
+                "EconomyBonus": 0,
+                "IsAdvanced": true,
+                "BaseConstructionBonus": 0,
+                "BaseProductionBonus": 0,
+                "BaseResearchBonus": 0,
+                "UsesMetal": false,
+                "UsesGas": false,
+                "UsesCrystal": false,
+                "UsesSolar": false,
+                "AddsPopCapacityByFertility": false,
+                "AreaCapacityBonus": 0,
+                "IncreasesAstroFertility": true
+              }
+            ]
+            """;
+
+            var expectedStructure = new StructureDefinition
+            {
+                Id = "BiosphereModification",
+                Name = "Biosphere Modification",
+                BaseCreditsCost = 20000,
+                EnergyRequirementPerLevel = 0,
+                PopulationRequirementPerLevel = 0,
+                AreaRequirementPerLevel = 0,
+                RequiresTechnology = new List<TechRequirement> { new("Computer", 24), new("Energy", 24) },
+                EconomyBonus = 0,
+                IsAdvanced = true,
+                BaseConstructionBonus = 0,
+                BaseProductionBonus = 0,
+                BaseResearchBonus = 0,
+                UsesMetal = false,
+                UsesGas = false,
+                UsesCrystal = false,
+                UsesSolar = false,
+                AddsPopCapacityByFertility = false,
+                AreaCapacityBonus = 0,
+                IncreasesAstroFertility = true // Expecting this value
+            };
+
+            IDefinitionLoader loader = new JsonDefinitionLoader();
+
+            // Act -----
+            IEnumerable<StructureDefinition> result = loader.LoadStructures(jsonInput);
+
+            // Assert -----
+            result.Should().NotBeNull();
+            result.Should().ContainSingle().Which.Should().BeEquivalentTo(expectedStructure);
+
+            // --- TEMPORARY Assert if needed ---
+            // Assert.True(false, "Verify IncreasesAstroFertility flag is loaded.");
+        }
     }
 }

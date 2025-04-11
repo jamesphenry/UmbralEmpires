@@ -18,4 +18,9 @@ public record StructureDefinition
     public int BaseResearchBonus { get; init; }
     public bool UsesMetal { get; init; }
     public bool UsesGas { get; init; }
+    public bool UsesCrystal { get; init; }
+    public bool UsesSolar { get; init; }
+    public bool AddsPopCapacityByFertility { get; init; }
+    public int AreaCapacityBonus { get; init; }
+    public bool IncreasesAstroFertility { get; init; }
 }
