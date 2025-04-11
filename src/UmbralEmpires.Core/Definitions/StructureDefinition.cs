@@ -10,6 +10,7 @@ public record StructureDefinition
     public int BaseCreditsCost { get; init; }
     public int EnergyRequirementPerLevel { get; init; }
     public int PopulationRequirementPerLevel { get; init; }
+    public int AreaRequirementPerLevel { get; init; }
 
     // We'll add other properties (Requirements, Bonuses, etc.) in later TDD cycles
 }
