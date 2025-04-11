@@ -1,6 +1,7 @@
 ﻿// src/UmbralEmpires.Infrastructure/DataLoading/JsonDefinitionLoader.cs
 using System;
 using System.Collections.Generic;
+using System.Linq; // Needed for LINQ Where clause
 using System.Text.Json;
 using UmbralEmpires.Application.Interfaces;
 using UmbralEmpires.Core.Definitions;
@@ -13,8 +14,7 @@ public class JsonDefinitionLoader : IDefinitionLoader
     {
         if (string.IsNullOrWhiteSpace(jsonContent))
         {
-            // Existing handling for empty/null input
-            return new List<StructureDefinition>();
+            return Enumerable.Empty<StructureDefinition>(); // Prefer Enumerable.Empty for empty lists
         }
 
         try
@@ -23,23 +23,36 @@ public class JsonDefinitionLoader : IDefinitionLoader
             {
                 PropertyNameCaseInsensitive = true
             };
-            var definitions = JsonSerializer.Deserialize<List<StructureDefinition>>(jsonContent, options);
-            return definitions ?? new List<StructureDefinition>();
+            // Step 1: Deserialize the whole list (might contain invalid items)
+            var initialList = JsonSerializer.Deserialize<List<StructureDefinition>>(jsonContent, options);
+
+            if (initialList == null)
+            {
+                return Enumerable.Empty<StructureDefinition>();
+            }
+
+            // --- NEW SECTION: Validation/Filtering ---
+            // Step 2: Filter the list to include only valid definitions
+            // Basic validation: Ensure required 'Id' property is present.
+            // This implements the core idea of the IsValid() check from pseudocode for this specific test.
+            var validList = initialList
+                .Where(structure => !string.IsNullOrWhiteSpace(structure.Id))
+                .ToList(); // Convert back to List or keep as IEnumerable
+
+            // Log warnings for skipped items? Could be added here or in validation logic.
+            if (validList.Count < initialList.Count)
+            {
+                Console.WriteLine($"Warning: Skipped {initialList.Count - validList.Count} structure(s) due to missing required properties (e.g., Id)."); // Basic logging
+            }
+            // --- END NEW SECTION ---
+
+            // Step 3: Return the filtered list
+            return validList;
         }
         catch (JsonException ex)
         {
-            // --- MODIFIED SECTION ---
-            // Instead of just logging and returning empty, re-throw the exception
-            // This makes the test expecting a JsonException pass.
-            Console.WriteLine($"Error deserializing structure definitions: {ex.Message}"); // Keep logging for now
-            throw; // Re-throw the original JsonException
-            // --- END MODIFIED SECTION ---
-
-            // Alternative for later refactor: wrap in custom exception
-            // throw new DefinitionLoadException("Failed to parse structure definitions due to invalid JSON.", ex);
+            Console.WriteLine($"Error deserializing structure definitions: {ex.Message}");
+            throw; // Re-throw as per previous test
         }
     }
-
-    // Placeholder for a potential custom exception (defined elsewhere, maybe Core or Application)
-    // public class DefinitionLoadException : Exception { /* ... constructors ... */ }
 }
