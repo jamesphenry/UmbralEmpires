@@ -72,24 +72,24 @@ namespace UmbralEmpires.Tests.DataLoading
             };
 
             // The loader class we expect to create (won't exist yet)
-            // UmbralEmpires.Application.Interfaces.IDefinitionLoader loader =
-            //    new UmbralEmpires.Infrastructure.DataLoading.JsonDefinitionLoader(); // Example placement
+            UmbralEmpires.Application.Interfaces.IDefinitionLoader loader =
+                new UmbralEmpires.Infrastructure.DataLoading.JsonDefinitionLoader(); // Example placement
 
 
             // Act -----
 
             // Call the method under test (won't compile yet)
-            // IEnumerable<UmbralEmpires.Core.Definitions.StructureDefinition> result = loader.LoadStructures(jsonInput);
+            IEnumerable<UmbralEmpires.Core.Definitions.StructureDefinition> result = loader.LoadStructures(jsonInput);
 
 
             // Assert -----
 
             // FluentAssertions check (won't compile yet)
-            // result.Should().NotBeNull();
-            // result.Should().ContainSingle().Which.Should().BeEquivalentTo(expectedStructure);
+            result.Should().NotBeNull();
+            result.Should().ContainSingle().Which.Should().BeEquivalentTo(expectedStructure);
 
             // --- TEMPORARY Assert to ensure failure until implementation exists ---
-            Assert.True(false, "Test infrastructure (classes/interfaces) not implemented yet.");
+            //Assert.True(false, "Test infrastructure (classes/interfaces) not implemented yet.");
         }
 
         // Future tests will go here...
