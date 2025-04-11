@@ -49,9 +49,11 @@ public class JsonDefinitionLoader : IDefinitionLoader
     {
         if (structure == null) return false;
         if (string.IsNullOrWhiteSpace(structure.Id)) return false;
-        // Add more checks here later...
-        // if (string.IsNullOrWhiteSpace(structure.Name)) return false;
-        // if (structure.BaseCreditsCost < 0) return false;
+        if (structure.BaseCreditsCost < 0)
+        {
+            Console.WriteLine($"Warning: Skipping structure ID '{structure.Id}' due to negative BaseCreditsCost ({structure.BaseCreditsCost})."); // Optional warning
+            return false;
+        }
         return true;
     }
 
