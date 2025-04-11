@@ -17,6 +17,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{0AB3BF05
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UmbralEmpires.Tests", "tests\UmbralEmpires.Tests\UmbralEmpires.Tests.csproj", "{C7720481-07AA-4CD3-86BE-CD45B9FDE41A}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UmbralEmpires.Infrastructure", "src\UmbralEmpires.Infrastructure\UmbralEmpires.Infrastructure.csproj", "{0C4A6D14-0BDC-436A-B1FD-CE7A209B4D1D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -87,6 +89,18 @@ Global
 		{C7720481-07AA-4CD3-86BE-CD45B9FDE41A}.Release|x64.Build.0 = Release|Any CPU
 		{C7720481-07AA-4CD3-86BE-CD45B9FDE41A}.Release|x86.ActiveCfg = Release|Any CPU
 		{C7720481-07AA-4CD3-86BE-CD45B9FDE41A}.Release|x86.Build.0 = Release|Any CPU
+		{0C4A6D14-0BDC-436A-B1FD-CE7A209B4D1D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0C4A6D14-0BDC-436A-B1FD-CE7A209B4D1D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0C4A6D14-0BDC-436A-B1FD-CE7A209B4D1D}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{0C4A6D14-0BDC-436A-B1FD-CE7A209B4D1D}.Debug|x64.Build.0 = Debug|Any CPU
+		{0C4A6D14-0BDC-436A-B1FD-CE7A209B4D1D}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{0C4A6D14-0BDC-436A-B1FD-CE7A209B4D1D}.Debug|x86.Build.0 = Debug|Any CPU
+		{0C4A6D14-0BDC-436A-B1FD-CE7A209B4D1D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0C4A6D14-0BDC-436A-B1FD-CE7A209B4D1D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0C4A6D14-0BDC-436A-B1FD-CE7A209B4D1D}.Release|x64.ActiveCfg = Release|Any CPU
+		{0C4A6D14-0BDC-436A-B1FD-CE7A209B4D1D}.Release|x64.Build.0 = Release|Any CPU
+		{0C4A6D14-0BDC-436A-B1FD-CE7A209B4D1D}.Release|x86.ActiveCfg = Release|Any CPU
+		{0C4A6D14-0BDC-436A-B1FD-CE7A209B4D1D}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -97,6 +111,7 @@ Global
 		{FBAC3E26-A8B9-4283-A084-5486C29337D6} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{2DED1B38-D74C-476E-B4C7-384CC177C85F} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{C7720481-07AA-4CD3-86BE-CD45B9FDE41A} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
+		{0C4A6D14-0BDC-436A-B1FD-CE7A209B4D1D} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {221D347C-DEDB-4508-8134-92E9ABB7C7EF}
