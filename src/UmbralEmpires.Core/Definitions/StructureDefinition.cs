@@ -13,4 +13,5 @@ public record StructureDefinition
     public List<TechRequirement> RequiresTechnology { get; init; } = new();
     public int EconomyBonus { get; init; }
     public bool IsAdvanced { get; init; }
+    public int BaseConstructionBonus { get; init; }
 }

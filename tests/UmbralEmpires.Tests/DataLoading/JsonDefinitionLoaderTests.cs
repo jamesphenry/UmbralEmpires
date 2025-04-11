@@ -493,9 +493,9 @@ namespace UmbralEmpires.Tests.DataLoading
                 "PopulationRequirementPerLevel": 1,
                 "AreaRequirementPerLevel": 1,
                 "RequiresTechnology": [],
-                "EconomyBonus": 0, // Example value
-                "IsAdvanced": false, // Example value
-                "SomeExtraJsonProperty": "This should be ignored", // <= EXTRA PROPERTY
+                "EconomyBonus": 0, 
+                "IsAdvanced": false, 
+                "SomeExtraJsonProperty": "This should be ignored", 
                 "AnotherExtraField": 12345
               }
             ]
