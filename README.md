@@ -3,6 +3,9 @@ Command the stars at your own pace in a single-player reimagining of AstroEmpire
 
 
 ---
+## 🧪 Latest Test Results
+
 <!-- test_results_start -->
+_No test results yet._
 <!-- test_results_end -->
 ---
