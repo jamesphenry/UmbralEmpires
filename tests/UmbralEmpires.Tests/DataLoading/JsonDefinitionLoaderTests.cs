@@ -50,6 +50,22 @@ namespace UmbralEmpires.Tests.DataLoading
                   .Which.Should().BeEquivalentTo(expectedStructure); // Ensure the item matches the expected data
         }
 
-        // Future tests will go here...
+        [Fact]
+        public void LoadStructures_Should_Return_Empty_List_For_Empty_Json_Array()
+        {
+            // Arrange -----
+            var jsonInput = "[]"; // Empty JSON array
+            IDefinitionLoader loader = new JsonDefinitionLoader();
+
+            // Act -----
+            IEnumerable<StructureDefinition> result = loader.LoadStructures(jsonInput);
+
+            // Assert -----
+            result.Should().NotBeNull(); // Should return an empty list, not null
+            result.Should().BeEmpty(); // Should contain no elements
+
+            // --- TEMPORARY Assert if needed until code verified ---
+            // Assert.True(false, "Verify implementation handles empty array correctly.");
+        }
     }
 }
