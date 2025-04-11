@@ -630,5 +630,58 @@ namespace UmbralEmpires.Tests.DataLoading
             // --- TEMPORARY Assert if needed ---
             // Assert.True(false, "Verify BaseProductionBonus is loaded.");
         }
+
+        [Fact]
+        public void LoadStructures_Should_Load_BaseResearchBonus()
+        {
+            // Arrange -----
+            // Using Research Labs which grant +8 Research bonus according to GDD list/Economy prototype
+            var jsonInput = """
+            [
+              {
+                "Id": "ResearchLabs",
+                "Name": "Research Labs",
+                "BaseCreditsCost": 2,
+                "EnergyRequirementPerLevel": 0,
+                "PopulationRequirementPerLevel": 1,
+                "AreaRequirementPerLevel": 1,
+                "RequiresTechnology": [],
+                "EconomyBonus": 0, // Assuming no direct economy bonus
+                "IsAdvanced": false,
+                "BaseConstructionBonus": 0, // Assuming no direct const bonus
+                "BaseProductionBonus": 0, // Assuming no direct prod bonus
+                "BaseResearchBonus": 8
+              }
+            ]
+            """;
+
+            var expectedStructure = new StructureDefinition
+            {
+                Id = "ResearchLabs",
+                Name = "Research Labs",
+                BaseCreditsCost = 2,
+                EnergyRequirementPerLevel = 0,
+                PopulationRequirementPerLevel = 1,
+                AreaRequirementPerLevel = 1,
+                RequiresTechnology = new List<TechRequirement>(),
+                EconomyBonus = 0,
+                IsAdvanced = false,
+                BaseConstructionBonus = 0,
+                BaseProductionBonus = 0,
+                BaseResearchBonus = 8 // Expecting this value
+            };
+
+            IDefinitionLoader loader = new JsonDefinitionLoader();
+
+            // Act -----
+            IEnumerable<StructureDefinition> result = loader.LoadStructures(jsonInput);
+
+            // Assert -----
+            result.Should().NotBeNull();
+            result.Should().ContainSingle().Which.Should().BeEquivalentTo(expectedStructure);
+
+            // --- TEMPORARY Assert if needed ---
+            // Assert.True(false, "Verify BaseResearchBonus is loaded.");
+        }
     }
 }
