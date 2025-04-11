@@ -530,5 +530,54 @@ namespace UmbralEmpires.Tests.DataLoading
             // --- TEMPORARY Assert if needed ---
             // Assert.True(false, "Verify extra JSON properties are ignored.");
         }
+
+        [Fact]
+        public void LoadStructures_Should_Load_BaseConstructionBonus()
+        {
+            // Arrange -----
+            // Using Robotic Factories which grant +2 Const/Prod bonus
+            var jsonInput = """
+            [
+              {
+                "Id": "RoboticFactories",
+                "Name": "Robotic Factories",
+                "BaseCreditsCost": 5,
+                "EnergyRequirementPerLevel": 0, // Assuming
+                "PopulationRequirementPerLevel": 1,
+                "AreaRequirementPerLevel": 1,
+                "RequiresTechnology": [ { "TechId": "Computer", "Level": 2 } ],
+                "EconomyBonus": 1,
+                "IsAdvanced": false, // Not marked advanced in GDD
+                "BaseConstructionBonus": 2
+              }
+            ]
+            """;
+
+            var expectedStructure = new StructureDefinition
+            {
+                Id = "RoboticFactories",
+                Name = "Robotic Factories",
+                BaseCreditsCost = 5,
+                EnergyRequirementPerLevel = 0,
+                PopulationRequirementPerLevel = 1,
+                AreaRequirementPerLevel = 1,
+                RequiresTechnology = new List<TechRequirement> { new("Computer", 2) },
+                EconomyBonus = 1,
+                IsAdvanced = false,
+                BaseConstructionBonus = 2 // Expecting this value
+            };
+
+            IDefinitionLoader loader = new JsonDefinitionLoader();
+
+            // Act -----
+            IEnumerable<StructureDefinition> result = loader.LoadStructures(jsonInput);
+
+            // Assert -----
+            result.Should().NotBeNull();
+            result.Should().ContainSingle().Which.Should().BeEquivalentTo(expectedStructure);
+
+            // --- TEMPORARY Assert if needed ---
+            // Assert.True(false, "Verify BaseConstructionBonus is loaded.");
+        }
     }
 }
