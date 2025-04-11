@@ -297,5 +297,46 @@ namespace UmbralEmpires.Tests.DataLoading
             // --- TEMPORARY Assert if needed ---
             // Assert.True(false, "Verify PopulationRequirementPerLevel is loaded.");
         }
+
+        [Fact]
+        public void LoadStructures_Should_Load_AreaRequirementPerLevel()
+        {
+            // Arrange -----
+            // Using Research Labs which require 1 Area according to GDD Structure List
+            var jsonInput = """
+            [
+              {
+                "Id": "ResearchLabs",
+                "Name": "Research Labs",
+                "BaseCreditsCost": 2,
+                "EnergyRequirementPerLevel": 0,
+                "PopulationRequirementPerLevel": 1,
+                "AreaRequirementPerLevel": 1
+              }
+            ]
+            """;
+
+            var expectedStructure = new StructureDefinition
+            {
+                Id = "ResearchLabs",
+                Name = "Research Labs",
+                BaseCreditsCost = 2,
+                EnergyRequirementPerLevel = 0,
+                PopulationRequirementPerLevel = 1, // Include previously added props
+                AreaRequirementPerLevel = 1 // Expecting this value
+            };
+
+            IDefinitionLoader loader = new JsonDefinitionLoader();
+
+            // Act -----
+            IEnumerable<StructureDefinition> result = loader.LoadStructures(jsonInput);
+
+            // Assert -----
+            result.Should().NotBeNull();
+            result.Should().ContainSingle().Which.Should().BeEquivalentTo(expectedStructure);
+
+            // --- TEMPORARY Assert if needed ---
+            // Assert.True(false, "Verify AreaRequirementPerLevel is loaded.");
+        }
     }
 }
