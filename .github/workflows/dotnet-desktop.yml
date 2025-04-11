@@ -5,13 +5,19 @@ on: [push, pull_request]
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    # Add this permissions block!
+    permissions:
+      checks: write # Allows the action to create the Check Run report
+      # Optional: Add pull-requests: write if you want annotations on PR files
+      # pull-requests: write
+
     steps:
     - uses: actions/checkout@v4
 
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: '9.0.x' # Or your target version
+        dotnet-version: '8.0.x' # Or your target version
 
     - name: Restore dependencies
       run: dotnet restore
@@ -20,16 +26,23 @@ jobs:
       run: dotnet build --no-restore
 
     - name: Test
-      id: tests # Give the test step an ID
+      id: tests
       run: dotnet test --no-build --verbosity normal --logger "trx;LogFileName=test-results.trx"
-      # Optional: Continue even if tests fail, so the reporter always runs
-      continue-on-error: true
+      continue-on-error: true # Keep this if you want the report even on failure
 
-    - name: Test Report # This step uses the Test Reporter action
+    - name: Test Report
       uses: dorny/test-reporter@v1
-      if: always() # Ensures this runs even if prior steps fail (like tests)
+      if: always()
       with:
-        name: xUnit Tests # Name of the check run which will be created
-        path: '**/test-results.trx' # Path to the test results file(s)
-        reporter: dotnet-trx # Specify the format
-        fail-on-error: 'true' # Report fail?
+        name: xUnit Tests
+        path: '**/test-results.trx'
+        reporter: dotnet-trx
+        fail-on-error: 'true'
+        # Keep your other options here:
+        path-replace-backslashes: false
+        list-suites: all
+        list-tests: all
+        max-annotations: 10
+        fail-on-empty: true
+        only-summary: false
+        token: ${{ secrets.GITHUB_TOKEN }} # Usually implied, but doesn't hurt to be explicit if needed
