@@ -2,7 +2,8 @@
 using FluentAssertions;
 using UmbralEmpires.Core.Definitions;       // Assuming this namespace for StructureDefinition
 using UmbralEmpires.Application.Interfaces; // Assuming this namespace for IDefinitionLoader
-using UmbralEmpires.Infrastructure.DataLoading; // Assuming this namespace for JsonDefinitionLoader
+using UmbralEmpires.Infrastructure.DataLoading;
+using System.Text.Json; // Assuming this namespace for JsonDefinitionLoader
 
 namespace UmbralEmpires.Tests.DataLoading
 {
@@ -106,6 +107,36 @@ namespace UmbralEmpires.Tests.DataLoading
 
             // --- TEMPORARY Assert if needed ---
             // Assert.True(false, "Verify implementation handles multiple items correctly.");
+        }
+
+        [Fact]
+        public void LoadStructures_Should_Throw_Exception_For_Invalid_Json()
+        {
+            // Arrange -----
+            var invalidJsonInput = """
+            [
+              {
+                "Id": "UrbanStructures",
+                "Name": "Urban Structures", // Missing comma here
+                "BaseCreditsCost": 1
+              }
+            ]
+            """; // Malformed JSON
+
+            IDefinitionLoader loader = new JsonDefinitionLoader();
+
+            // Act -----
+            // Use an Action delegate to wrap the call that should throw
+            Action act = () => loader.LoadStructures(invalidJsonInput);
+
+            // Assert -----
+            // Assert that the action throws the expected exception
+            // System.Text.Json typically throws JsonException for parsing errors
+            act.Should().Throw<JsonException>()
+               .WithMessage("*invalid JSON*"); // Optional: Check exception message contains relevant info
+
+            // --- TEMPORARY Assert if needed ---
+            // Assert.True(false, "Verify implementation throws exception on invalid JSON.");
         }
     }
 }
