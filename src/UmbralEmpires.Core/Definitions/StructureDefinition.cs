@@ -16,5 +16,5 @@ public record StructureDefinition
     public int BaseConstructionBonus { get; init; }
     public int BaseProductionBonus { get; init; }
     public int BaseResearchBonus { get; init; }
-
+    public bool UsesMetal { get; init; }
 }
