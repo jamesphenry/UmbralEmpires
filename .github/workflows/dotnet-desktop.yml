@@ -1,71 +1,35 @@
-name: .NET 9 Tests
+name: .NET Build and Test
 
-on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+on: [push, pull_request]
 
 jobs:
-  test:
+  build-and-test:
     runs-on: ubuntu-latest
-
     steps:
-      - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
-      - name: Setup .NET 9 SDK
-        uses: actions/setup-dotnet@v3
-        with:
-          dotnet-version: '9.0.x'
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '9.0.x' # Or your target version
 
-      - name: Restore dependencies
-        run: dotnet restore
+    - name: Restore dependencies
+      run: dotnet restore
 
-      - name: Run Tests (human-readable + TRX)
-        run: |
-          dotnet test --logger "trx;LogFileName=test-results.trx" --logger "console;verbosity=normal" > test-results.log
+    - name: Build
+      run: dotnet build --no-restore
 
-      - name: Upload TRX as artifact (optional)
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-results
-          path: '**/*.trx'
+    - name: Test
+      id: tests # Give the test step an ID
+      run: dotnet test --no-build --verbosity normal --logger "trx;LogFileName=test-results.trx"
+      # Optional: Continue even if tests fail, so the reporter always runs
+      continue-on-error: true
 
-      - name: Update README.md with test results
-        uses: unfor19/replacer-action@v1
-        with:
-          src-file-path: "test-results.log"
-          dst-file-path: "README.md"
-          start-value: "<!-- test_results_start -->"
-          end-value: "<!-- test_results_end -->"
-
-      - name: Debug - Check GitHub Token Access
-        run: |
-          echo "GITHUB_TOKEN is set: ${{ secrets.GH_PAT }}"
-          git config user.name "umbralempires-bot"
-          git config user.email "bot@umbral.dev"
-          git remote set-url origin https://x-access-token:${{ secrets.GH_PAT }}@github.com/${{ github.repository }}
-          git fetch origin
-          git status
-          git log -1 --oneline
-
-      - name: Commit and Push README.md
-        env:
-          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
-        run: |
-          git config user.name "umbralempires-bot"
-          git config user.email "bot@umbral.dev"
-          # git remote set-url origin https://x-access-token:${{ secrets.GH_PAT }}@github.com/${{ github.repository }}
-          # Force push using default GITHUB_TOKEN (no need to use secrets directly)
-          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
-
-        
-          # Stage the correct files
-          git add README.md test-results.log
-        
-          # Check if files are staged
-          git status
-
-          # Commit and push if there are changes
-          git diff --quiet && git diff --staged --quiet || git commit -m "chore: update README with test results"
-          git push --force
+    - name: Test Report # This step uses the Test Reporter action
+      uses: dorny/test-reporter@v1
+      if: always() # Ensures this runs even if prior steps fail (like tests)
+      with:
+        name: xUnit Tests # Name of the check run which will be created
+        path: '**/test-results.trx' # Path to the test results file(s)
+        reporter: dotnet-trx # Specify the format
+        fail-on-error: 'true' # Report fail?
