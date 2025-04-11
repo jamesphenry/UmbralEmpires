@@ -88,8 +88,6 @@ namespace UmbralEmpires.Tests.DataLoading
             result.Should().NotBeNull();
             result.Should().ContainSingle().Which.Should().BeEquivalentTo(expectedStructure);
 
-            // --- TEMPORARY Assert to ensure failure until implementation exists ---
-            //Assert.True(false, "Test infrastructure (classes/interfaces) not implemented yet.");
         }
 
         // Future tests will go here...
