@@ -443,12 +443,12 @@ namespace UmbralEmpires.Tests.DataLoading
                 "Id": "NaniteFactories",
                 "Name": "Nanite Factories",
                 "BaseCreditsCost": 80,
-                "EnergyRequirementPerLevel": 0, // Assuming defaults if not specified or relevant
+                "EnergyRequirementPerLevel": 0,
                 "PopulationRequirementPerLevel": 1,
                 "AreaRequirementPerLevel": 1,
                 "RequiresTechnology": [ { "TechId": "Computer", "Level": 10 }, { "TechId": "Laser", "Level": 8 } ], // Example Req
                 "EconomyBonus": 2,
-                "IsAdvanced": true // Expecting standard boolean in JSON
+                "IsAdvanced": true
               }
             ]
             """;
@@ -463,7 +463,7 @@ namespace UmbralEmpires.Tests.DataLoading
                 AreaRequirementPerLevel = 1,
                 RequiresTechnology = new List<TechRequirement> { new("Computer", 10), new("Laser", 8) },
                 EconomyBonus = 2,
-                IsAdvanced = true // Expecting this value
+                IsAdvanced = true
             };
 
             IDefinitionLoader loader = new JsonDefinitionLoader();
