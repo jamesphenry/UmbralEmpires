@@ -5,11 +5,19 @@
 ---
 ## Test Results
 <!-- TEST-RESULTS-START -->
-❓ **Latest Run:** (Completed)
+# Test Run Report ($((Get-Date).ToString('yyyy-MM-dd HH:mm:ss')) UTC)
+
+## Summary
+* **Overall Outcome:** Completed
 * Total Tests: 1
 * Passed: 1
 * Failed: 0
-_(Updated: 2025-04-11 06:29:13 UTC)_
+
+## Details
+| Test Name | Outcome | Duration (ms) | Error Message |
+|-----------|---------|---------------|---------------|
+| UmbralEmpires.Tests.DataLoading.JsonDefinitionLoaderTests.LoadStructures_Should_Load_Single_Simple_Structure_From_Json | Passed | 0 | - |
+
 <!-- TEST-RESULTS-END -->
 *Summary will be automatically updated here.*
 
