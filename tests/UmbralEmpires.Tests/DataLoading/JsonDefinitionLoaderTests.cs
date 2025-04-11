@@ -258,9 +258,8 @@ namespace UmbralEmpires.Tests.DataLoading
             // --- TEMPORARY Assert if needed ---
             // Assert.True(false, "Verify EnergyRequirementPerLevel is loaded.");
         }
-    }
 
-    [Fact]
+        [Fact]
         public void LoadStructures_Should_Load_PopulationRequirementPerLevel()
         {
             // Arrange -----
@@ -299,3 +298,4 @@ namespace UmbralEmpires.Tests.DataLoading
             // Assert.True(false, "Verify PopulationRequirementPerLevel is loaded.");
         }
     }
+}
