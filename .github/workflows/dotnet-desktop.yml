@@ -1,6 +1,7 @@
 # .github/workflows/dotnet.yml
 
-name: .NET Build, Test, and Update README
+# Updated name to reflect both actions
+name: .NET Build, Test, Update README and Wiki
 
 # Trigger only on pushes to the main branch
 on:
@@ -9,171 +10,235 @@ on:
       - main # Or master, or your default branch name
 
 jobs:
-  build-test-readme:
+  # Updated job ID for clarity
+  build-test-publish:
     runs-on: ubuntu-latest # Or windows-latest if preferred
 
     # Permissions needed for the steps below
     permissions:
-      checks: write      # For dorny/test-reporter to create Check Runs (optional)
-      contents: write    # For actions/checkout AND for pushing README changes
+      checks: write      # For dorny/test-reporter UI report
+      contents: write    # For checking out main repo, wiki repo, AND pushing changes to both
 
     steps:
-    - name: Checkout code
+    # --- Checkout Main Repository ---
+    # MODIFIED: Checkout main repo into 'main' directory
+    - name: Checkout main repository code
       uses: actions/checkout@v4
-      # fetch-depth: 0 # Uncomment if you need full history for other Git operations
+      with:
+        path: main
 
+    # --- Checkout Wiki Repository ---
+    # ADDED: Checkout wiki repo into 'wiki' directory
+    - name: Checkout wiki repository
+      uses: actions/checkout@v4
+      with:
+        # This automatically uses your repository name
+        repository: ${{ github.repository }}.wiki
+        path: wiki
+
+    # --- Build and Test Steps ---
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: '9.0.x' # Adjust to your project's .NET version
+        dotnet-version: '9.0.x' # Your specified .NET version
 
+    # MODIFIED: Added working-directory
     - name: Restore dependencies
+      working-directory: ./main
       run: dotnet restore
 
+    # MODIFIED: Added working-directory
     - name: Build
+      working-directory: ./main
       run: dotnet build --no-restore --configuration Release
 
+    # MODIFIED: Added working-directory
     - name: Run Tests
       id: tests # Give the step an ID to check its outcome later
+      working-directory: ./main
       run: dotnet test --no-build --configuration Release --verbosity normal --logger "trx;LogFileName=test-results.trx"
       # Continue workflow even if tests fail, so we can report the failure
       continue-on-error: true
 
-    # Optional: Use dorny/test-reporter for the nice UI summary in Checks tab
+    # MODIFIED: Adjusted path to look inside 'main' directory
     - name: Generate Test Report Summary (UI)
       uses: dorny/test-reporter@v1
       if: always() # Ensures this runs even if test step fails/continues
       with:
         name: xUnit Tests (UI Report) # Name for the Check Run
-        path: '**/test-results.trx'    # Path pattern to find TRX files
+        path: main/**/test-results.trx # Look for TRX inside the 'main' checkout
         reporter: dotnet-trx           # Type of test report
         fail-on-error: 'true'          # Mark Check Run as failed if tests failed
 
     # --- Step to Update README ---
+    # MODIFIED: Added working-directory
     - name: Parse Test Results and Update README
-      # Run this step only if tests were attempted (succeeded or failed)
       if: steps.tests.outcome == 'success' || steps.tests.outcome == 'failure'
+      working-directory: ./main # Operate within the main repo checkout
       shell: pwsh # Use PowerShell for cross-platform compatibility
       run: |
-        # --- Find the TRX file ---
+        # --- Find the TRX file (searches within ./main) ---
         $trxFiles = Get-ChildItem -Path . -Recurse -Filter "test-results.trx" | Select-Object -First 1
         if ($null -eq $trxFiles) {
-          Write-Error "Test results file (test-results.trx) not found anywhere in the workspace."
+          Write-Error "Test results file (test-results.trx) not found anywhere in the main checkout directory."
           exit 1
         }
-        $trxFile = $trxFiles.FullName # Use the full path found
+        $trxFile = $trxFiles.FullName # Use the full path found within ./main
         Write-Host "Found test results file at: $trxFile"
 
-        # --- Define README and Markers ---
+        # --- Define README and Markers (refers to README.md within ./main) ---
         $readmeFile = "README.md"
-        $startMarker = "<!-- TEST-RESULTS-START -->" # Ensure this EXACTLY matches your README
-        $endMarker = "<!-- TEST-RESULTS-END -->"     # Ensure this EXACTLY matches your README
+        # !! NOTE: You had TEST-RESULTS-START / END in your previous file snippet !!
+        # Adjust if you use TEST_SUMMARY_START / END instead
+        $startMarker = ""
+        $endMarker = ""
 
         # --- Load and Parse TRX File ---
-        try {
-          [xml]$trx = Get-Content $trxFile
-        } catch {
-          Write-Error "Error parsing TRX file '$trxFile': $_"
-          exit 1
-        }
-
-        # Find the summary node
-        $summary = $trx.TestRun.ResultSummary
-        if ($null -eq $summary) {
-          Write-Error "Could not find ResultSummary node in TRX file."
-          exit 1
-        }
-
-        # Extract counts (handle cases where Counters might be missing)
+        # ... (rest of your existing PowerShell script for README summary is unchanged) ...
+        try { [xml]$trx = Get-Content $trxFile } catch { Write-Error "Error parsing TRX file '$trxFile': $_"; exit 1 }
+        $summary = $trx.TestRun.ResultSummary; if ($null -eq $summary) { Write-Error "Could not find ResultSummary node."; exit 1 }
         $counters = $summary.Counters
-        $total = $counters.total | ForEach-Object { $_ -as [int] } | Where-Object { $_ -ne $null } | Measure-Object -Sum | Select-Object -ExpandProperty Sum
-        $passed = $counters.passed | ForEach-Object { $_ -as [int] } | Where-Object { $_ -ne $null } | Measure-Object -Sum | Select-Object -ExpandProperty Sum
-        $failed = $counters.failed | ForEach-Object { $_ -as [int] } | Where-Object { $_ -ne $null } | Measure-Object -Sum | Select-Object -ExpandProperty Sum
-        if ($null -eq $total) {$total = 0}
-        if ($null -eq $passed) {$passed = 0}
-        if ($null -eq $failed) {$failed = 0}
-
-        # Determine overall outcome for status emoji
-        $outcome = $summary.outcome
-        $statusEmoji = "❓" # Default: Unknown/Other
-        if ($outcome -eq "Failed") {
-          $statusEmoji = "❌"
-        } elseif ($outcome -eq "Passed") {
-          $statusEmoji = "✅"
-        } elseif ($outcome -eq "NotExecuted") {
-          $statusEmoji = "➖"
-        } # Add more conditions if needed for other outcomes (e.g., Aborted)
-
-        # Format the results as Markdown
+        $total = $counters.total | ForEach-Object { $_ -as [int] } | Where-Object { $_ -ne $null } | Measure-Object -Sum | Select-Object -ExpandProperty Sum; if ($null -eq $total) {$total = 0}
+        $passed = $counters.passed | ForEach-Object { $_ -as [int] } | Where-Object { $_ -ne $null } | Measure-Object -Sum | Select-Object -ExpandProperty Sum; if ($null -eq $passed) {$passed = 0}
+        $failed = $counters.failed | ForEach-Object { $_ -as [int] } | Where-Object { $_ -ne $null } | Measure-Object -Sum | Select-Object -ExpandProperty Sum; if ($null -eq $failed) {$failed = 0}
+        $outcome = $summary.outcome; $statusEmoji = "❓"; if ($outcome -eq "Failed") {$statusEmoji = "❌"} elseif ($outcome -eq "Passed") {$statusEmoji = "✅"} elseif ($outcome -eq "NotExecuted") {$statusEmoji = "➖"}
         $runDate = Get-Date -Format 'yyyy-MM-dd HH:mm:ss UTC'
-        $newSummary = @"
-        $statusEmoji **Latest Run:** ($outcome)
-        * Total Tests: $total
-        * Passed: $passed
-        * Failed: $failed
-        _(Updated: $runDate)_
-        "@
-
-        Write-Host "Generated Summary:"
-        Write-Host $newSummary
-
-        # --- Update README ---
-        try {
-          $readmeContent = Get-Content $readmeFile -Raw
-        } catch {
-          Write-Error "Error reading README file '$readmeFile': $_"
-          exit 1
-        }
-
-        $startIndex = $readmeContent.IndexOf($startMarker)
-        $endIndex = $readmeContent.IndexOf($endMarker)
-
-        if ($startIndex -eq -1 -or $endIndex -eq -1 -or $startIndex -ge $endIndex) {
-          Write-Error "Start ('$startMarker') / End ('$endMarker') markers not found or invalid in $readmeFile."
-          exit 1
-        }
-
-        # Build the new README content
-        $startContent = $readmeContent.Substring(0, $startIndex + $startMarker.Length)
-        $endContent = $readmeContent.Substring($endIndex)
+        $newSummary = "@`n$statusEmoji **Latest Run:** ($outcome)`n* Total Tests: $total`n* Passed: $passed`n* Failed: $failed`n_(Updated: $runDate)_`n@"
+        Write-Host "Generated Summary:"; Write-Host $newSummary
+        try { $readmeContent = Get-Content $readmeFile -Raw } catch { Write-Error "Error reading README file '$readmeFile': $_"; exit 1 }
+        $startIndex = $readmeContent.IndexOf($startMarker); $endIndex = $readmeContent.IndexOf($endMarker)
+        if ($startIndex -eq -1 -or $endIndex -eq -1 -or $startIndex -ge $endIndex) { Write-Error "Start ('$startMarker') / End ('$endMarker') markers not found or invalid in $readmeFile."; exit 1 }
+        $startContent = $readmeContent.Substring(0, $startIndex + $startMarker.Length); $endContent = $readmeContent.Substring($endIndex)
         $finalContent = $startContent + "`n" + $newSummary + "`n" + $endContent
+        try { Set-Content -Path $readmeFile -Value $finalContent -NoNewline -Encoding UTF8; Write-Host "$readmeFile updated successfully." } catch { Write-Error "Error writing updated content to '$readmeFile': $_"; exit 1 }
 
-        # Write the updated content back to README.md
-        try {
-          # Ensure using UTF8 encoding, especially if emojis are involved
-          Set-Content -Path $readmeFile -Value $finalContent -NoNewline -Encoding UTF8
-          Write-Host "$readmeFile updated successfully."
-        } catch {
-          Write-Error "Error writing updated content to '$readmeFile': $_"
-          exit 1
+    # --- Step to Commit and Push README changes ---
+    # MODIFIED: Added working-directory
+    - name: Commit and Push README changes
+      if: success() && github.ref == 'refs/heads/main' && github.event_name == 'push'
+      working-directory: ./main # Operate within the main repo checkout
+      shell: bash
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action Bot"
+        readme_file="README.md"
+        if git diff --quiet HEAD -- "$readme_file"; then
+          echo "No changes detected in $readme_file."
+        else
+          echo "Changes detected in $readme_file. Committing..."
+          git add "$readme_file"
+          git commit -m "docs: Update test results summary in README [skip ci]"
+          echo "Pushing README changes..."
+          git push origin main # Push README to main repo
+        fi
+
+    # --- Step to Generate Full Report for Wiki ---
+    # ADDED: New step to generate detailed report
+    - name: Generate Detailed Test Report (Markdown for Wiki)
+      id: generate-wiki-report
+      if: steps.tests.outcome == 'success' || steps.tests.outcome == 'failure'
+      shell: pwsh
+      run: |
+        # Construct paths using GITHUB_WORKSPACE base
+        $mainCheckoutPath = Join-Path $env:GITHUB_WORKSPACE "main"
+        $wikiCheckoutPath = Join-Path $env:GITHUB_WORKSPACE "wiki"
+
+        # Find TRX file within the main checkout directory
+        $trxFileInstance = Get-ChildItem -Path $mainCheckoutPath -Recurse -Filter "test-results.trx" | Select-Object -First 1
+        if ($null -eq $trxFileInstance) {
+            Write-Error "TRX file not found within $mainCheckoutPath"
+            exit 1
+        }
+        $trxFilePath = $trxFileInstance.FullName
+        Write-Host "Source TRX: $trxFilePath"
+
+        # Output path for the Markdown file within the wiki repo checkout
+        $wikiReportFile = Join-Path $wikiCheckoutPath "Test-Report-Latest.md" # Example filename
+        Write-Host "Target Wiki MD: $wikiReportFile"
+
+        # --- Load and Parse TRX File ---
+        [xml]$trx = Get-Content $trxFilePath
+        $summary = $trx.TestRun.ResultSummary
+        $counters = $summary.Counters
+        $outcome = $summary.outcome
+
+        # --- Start Markdown Content ---
+        $mdContent = "# Test Run Report (`$((Get-Date).ToString('yyyy-MM-dd HH:mm:ss')) UTC`)"
+        $mdContent += "`n`n## Summary`n"
+        $mdContent += "* **Overall Outcome:** $outcome`n"
+        $mdContent += "* Total Tests: $($counters.total)`n"
+        $mdContent += "* Passed: $($counters.passed)`n"
+        $mdContent += "* Failed: $($counters.failed)`n"
+        # Add other counters if needed (Skipped, etc.)
+
+        # --- Detailed Results Table ---
+        $mdContent += "`n## Details`n"
+        $mdContent += "| Test Name | Outcome | Duration (ms) | Error Message |`n"
+        $mdContent += "|-----------|---------|---------------|---------------|`n"
+
+        $results = $trx.TestRun.Results.UnitTestResult
+        # Ensure results is always an array, even if only one test ran
+        if ($null -ne $results -and $results.GetType().Name -ne 'Object[]') { $results = @($results) }
+
+        if ($null -ne $results) {
+             # Sort results (e.g., failures first, then by name)
+            $sortedResults = $results | Sort-Object @{Expression={$_.outcome -ne 'Failed'}}, testName
+            foreach ($result in $sortedResults) {
+                $testName = $result.testName
+                $testOutcome = $result.outcome
+                # Handle potential missing duration - use try/catch or check $null
+                $durationMs = 0
+                try { $durationMs = [math]::Round(($result.duration | ConvertTo-TimeSpan).TotalMilliseconds) } catch {}
+
+                $errorMessage = "-" # Default if no error
+
+                if ($result.Output.ErrorInfo) {
+                    # Simple error message formatting, escape pipe chars for table
+                    $errorMessage = ($result.Output.ErrorInfo.Message | Out-String).Trim() -replace '\|','\|' -replace "`n","<br>" -replace "`r",""
+                }
+
+                $mdContent += "| $($testName -replace '\|','\|') | $testOutcome | $durationMs | $errorMessage |`n"
+            }
+        } else {
+             $mdContent += "| (No test results found) | - | - | - |`n"
         }
 
-    # --- Step to Commit and Push ---
-    - name: Commit and Push README changes
-      # Run only if the previous step succeeded AND we are on the main branch push event
+        # --- Write to File in Wiki Checkout ---
+        try {
+            Set-Content -Path $wikiReportFile -Value $mdContent -Encoding UTF8
+            Write-Host "Successfully generated wiki report at $wikiReportFile"
+        } catch {
+            Write-Error "Failed to write wiki report file: $_"
+            exit 1
+        }
+
+    # --- Step to Commit and Push Wiki Changes ---
+    # ADDED: New step to commit/push wiki changes
+    - name: Commit and Push Wiki Report
       if: success() && github.ref == 'refs/heads/main' && github.event_name == 'push'
-      # Use bash shell for git commands
+      # MUST run within the wiki directory
+      working-directory: ./wiki
       shell: bash
       run: |
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action Bot"
 
-        # Define the filename directly in Bash or use the literal string
-        readme_file="README.md"
+        report_file="Test-Report-Latest.md" # Match filename from previous step
 
-        # Check if the specific file has actually changed
-        if git diff --quiet HEAD -- "$readme_file"; then
-          echo "No changes detected in $readme_file."
-          exit 0 # Exit successfully, nothing to commit
+        # Check if the report file exists and has changes relative to HEAD
+        # Using git status is simpler here than git diff if the file might be new
+        if ! git status --porcelain -- "$report_file" | grep -q .; then
+            echo "No changes detected in $report_file or file doesn't exist/is ignored."
+            # Decide if you want to exit 0 or let it continue if maybe other wiki files changed
+            # If ONLY this file matters, exit 0 is fine.
+            exit 0
         fi
 
-        echo "Changes detected in $readme_file. Committing..."
-        # Add the specific file
-        git add "$readme_file"
+        echo "Changes detected in $report_file. Adding and Committing..."
+        git add "$report_file"
+        git commit -m "docs: Update latest test report [skip ci]"
 
-        # Add [skip ci] to the commit message to prevent this commit from triggering the workflow again
-        git commit -m "docs: Update test results summary in README [skip ci]"
-
-        echo "Pushing changes..."
-        # Ensure 'main' matches your default branch name
-        git push origin main
+        echo "Pushing wiki changes..."
+        # Wiki default branch is often 'master' - CHECK YOURS and change if needed
+        git push origin master
+        
