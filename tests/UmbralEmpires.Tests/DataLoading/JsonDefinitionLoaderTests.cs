@@ -683,5 +683,60 @@ namespace UmbralEmpires.Tests.DataLoading
             // --- TEMPORARY Assert if needed ---
             // Assert.True(false, "Verify BaseResearchBonus is loaded.");
         }
+
+        [Fact]
+        public void LoadStructures_Should_Load_UsesMetal_Flag()
+        {
+            // Arrange -----
+            // Using Metal Refineries which should use Metal potential
+            var jsonInput = """
+            [
+              {
+                "Id": "MetalRefineries",
+                "Name": "Metal Refineries",
+                "BaseCreditsCost": 1,
+                "EnergyRequirementPerLevel": 0,
+                "PopulationRequirementPerLevel": 1,
+                "AreaRequirementPerLevel": 1,
+                "RequiresTechnology": [],
+                "EconomyBonus": 1,
+                "IsAdvanced": false,
+                "BaseConstructionBonus": 0,
+                "BaseProductionBonus": 0,
+                "BaseResearchBonus": 0,
+                "UsesMetal": true
+              }
+            ]
+            """;
+
+            var expectedStructure = new StructureDefinition
+            {
+                Id = "MetalRefineries",
+                Name = "Metal Refineries",
+                BaseCreditsCost = 1,
+                EnergyRequirementPerLevel = 0,
+                PopulationRequirementPerLevel = 1,
+                AreaRequirementPerLevel = 1,
+                RequiresTechnology = new List<TechRequirement>(),
+                EconomyBonus = 1,
+                IsAdvanced = false,
+                BaseConstructionBonus = 0,
+                BaseProductionBonus = 0,
+                BaseResearchBonus = 0,
+                UsesMetal = true // Expecting this value
+            };
+
+            IDefinitionLoader loader = new JsonDefinitionLoader();
+
+            // Act -----
+            IEnumerable<StructureDefinition> result = loader.LoadStructures(jsonInput);
+
+            // Assert -----
+            result.Should().NotBeNull();
+            result.Should().ContainSingle().Which.Should().BeEquivalentTo(expectedStructure);
+
+            // --- TEMPORARY Assert if needed ---
+            // Assert.True(false, "Verify UsesMetal flag is loaded.");
+        }
     }
 }
