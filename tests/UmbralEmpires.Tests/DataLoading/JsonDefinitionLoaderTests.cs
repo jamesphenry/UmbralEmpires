@@ -478,5 +478,57 @@ namespace UmbralEmpires.Tests.DataLoading
             // --- TEMPORARY Assert if needed ---
             // Assert.True(false, "Verify IsAdvanced flag is loaded.");
         }
+
+        [Fact]
+        public void LoadStructures_Should_Ignore_Extra_Json_Properties()
+        {
+            // Arrange -----
+            var jsonInput = """
+            [
+              {
+                "Id": "ResearchLabs",
+                "Name": "Research Labs",
+                "BaseCreditsCost": 2,
+                "EnergyRequirementPerLevel": 0,
+                "PopulationRequirementPerLevel": 1,
+                "AreaRequirementPerLevel": 1,
+                "RequiresTechnology": [],
+                "EconomyBonus": 0, // Example value
+                "IsAdvanced": false, // Example value
+                "SomeExtraJsonProperty": "This should be ignored", // <= EXTRA PROPERTY
+                "AnotherExtraField": 12345
+              }
+            ]
+            """;
+
+            // Expected object only contains properties defined in the C# record
+            var expectedStructure = new StructureDefinition
+            {
+                Id = "ResearchLabs",
+                Name = "Research Labs",
+                BaseCreditsCost = 2,
+                EnergyRequirementPerLevel = 0,
+                PopulationRequirementPerLevel = 1,
+                AreaRequirementPerLevel = 1,
+                RequiresTechnology = new List<TechRequirement>(),
+                EconomyBonus = 0,
+                IsAdvanced = false
+                // Note: No 'SomeExtraJsonProperty' or 'AnotherExtraField' here
+            };
+
+            IDefinitionLoader loader = new JsonDefinitionLoader();
+
+            // Act -----
+            IEnumerable<StructureDefinition> result = loader.LoadStructures(jsonInput);
+
+            // Assert -----
+            result.Should().NotBeNull();
+            // The assertion checks if the loaded object matches the expected one,
+            // implicitly verifying extra fields were ignored.
+            result.Should().ContainSingle().Which.Should().BeEquivalentTo(expectedStructure);
+
+            // --- TEMPORARY Assert if needed ---
+            // Assert.True(false, "Verify extra JSON properties are ignored.");
+        }
     }
 }
