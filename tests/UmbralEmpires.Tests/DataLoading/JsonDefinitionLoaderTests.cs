@@ -222,5 +222,41 @@ namespace UmbralEmpires.Tests.DataLoading
             // --- TEMPORARY Assert if needed ---
             // Assert.True(false, "Verify implementation skips objects with negative costs.");
         }
+
+        [Fact]
+        public void LoadStructures_Should_Load_EnergyRequirementPerLevel()
+        {
+            // Arrange -----
+            var jsonInput = """
+            [
+              {
+                "Id": "FusionPlants",
+                "Name": "Fusion Plants",
+                "BaseCreditsCost": 20,
+                "EnergyRequirementPerLevel": 4
+              }
+            ]
+            """;
+
+            var expectedStructure = new StructureDefinition
+            {
+                Id = "FusionPlants",
+                Name = "Fusion Plants",
+                BaseCreditsCost = 20,
+                EnergyRequirementPerLevel = 4 // Expecting this value to be loaded
+            };
+
+            IDefinitionLoader loader = new JsonDefinitionLoader();
+
+            // Act -----
+            IEnumerable<StructureDefinition> result = loader.LoadStructures(jsonInput);
+
+            // Assert -----
+            result.Should().NotBeNull();
+            result.Should().ContainSingle().Which.Should().BeEquivalentTo(expectedStructure);
+
+            // --- TEMPORARY Assert if needed ---
+            // Assert.True(false, "Verify EnergyRequirementPerLevel is loaded.");
+        }
     }
 }
