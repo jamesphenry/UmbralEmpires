@@ -191,12 +191,12 @@ namespace UmbralEmpires.Tests.DataLoading
               {
                 "Id": "NegativeCostStructure",
                 "Name": "Invalid Structure",
-                "BaseCreditsCost": -10 // Invalid cost
+                "BaseCreditsCost": -10
               },
               {
                 "Id": "ValidCostStructure",
                 "Name": "Valid Structure",
-                "BaseCreditsCost": 10 // Valid cost
+                "BaseCreditsCost": 10
               }
             ]
             """;
