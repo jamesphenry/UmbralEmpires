@@ -338,5 +338,53 @@ namespace UmbralEmpires.Tests.DataLoading
             // --- TEMPORARY Assert if needed ---
             // Assert.True(false, "Verify AreaRequirementPerLevel is loaded.");
         }
+
+        [Fact]
+        public void LoadStructures_Should_Load_RequiresTechnology_List()
+        {
+            // Arrange -----
+            // Using Fusion Plants which require Energy 6
+            var jsonInput = """
+            [
+              {
+                "Id": "FusionPlants",
+                "Name": "Fusion Plants",
+                "BaseCreditsCost": 20,
+                "EnergyRequirementPerLevel": 4, // Energy *consumed* per level
+                "PopulationRequirementPerLevel": 0, // Assuming 0 if not listed? Check GDD.
+                "AreaRequirementPerLevel": 1,
+                "RequiresTechnology": [ // Expecting a JSON array for the list
+                  { "TechId": "Energy", "Level": 6 }
+                ]
+              }
+            ]
+            """;
+
+            var expectedStructure = new StructureDefinition
+            {
+                Id = "FusionPlants",
+                Name = "Fusion Plants",
+                BaseCreditsCost = 20,
+                EnergyRequirementPerLevel = 4,
+                PopulationRequirementPerLevel = 0, // Assuming default if not in JSON / GDD?
+                AreaRequirementPerLevel = 1,
+                RequiresTechnology = new List<TechRequirement> // Expecting the list
+                {
+                    new TechRequirement("Energy", 6)
+                }
+            };
+
+            IDefinitionLoader loader = new JsonDefinitionLoader();
+
+            // Act -----
+            IEnumerable<StructureDefinition> result = loader.LoadStructures(jsonInput);
+
+            // Assert -----
+            result.Should().NotBeNull();
+            result.Should().ContainSingle().Which.Should().BeEquivalentTo(expectedStructure);
+
+            // --- TEMPORARY Assert if needed ---
+            // Assert.True(false, "Verify RequiresTechnology list is loaded.");
+        }
     }
 }
