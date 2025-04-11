@@ -1,18 +1,28 @@
-name: .NET Build and Test
+name: .NET Build, Test, and Update README
 
-on: [push, pull_request]
+# Trigger on pushes to the main branch ONLY to avoid constant README updates
+on:
+  push:
+    branches:
+      - main # Or master, or your default branch
 
 jobs:
-  build-and-test:
+  build-test-readme:
     runs-on: ubuntu-latest
-    # Add this permissions block!
+    # Permissions needed:
+    # checks: write - For the dorny/test-reporter (optional if you remove it)
+    # contents: write - To checkout code AND push changes back to the repo
     permissions:
-      checks: write # Allows the action to create the Check Run report
-      # Optional: Add pull-requests: write if you want annotations on PR files
-      # pull-requests: write
+      checks: write
+      contents: write
 
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
+      # Fetch full history to calculate changes correctly if needed,
+      # though not strictly necessary for just replacing markers.
+      # with:
+      #   fetch-depth: 0
 
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
@@ -25,24 +35,111 @@ jobs:
     - name: Build
       run: dotnet build --no-restore
 
-    - name: Test
+    - name: Run Tests
       id: tests
       run: dotnet test --no-build --verbosity normal --logger "trx;LogFileName=test-results.trx"
-      continue-on-error: true # Keep this if you want the report even on failure
+      # Continue even if tests fail, so we can report the failure in README
+      continue-on-error: true
 
-    - name: Test Report
+    # Optional: Keep dorny/test-reporter for the UI report
+    - name: Generate Test Report Summary (UI)
       uses: dorny/test-reporter@v1
-      if: always()
+      if: always() # Run even if tests fail
       with:
-        name: xUnit Tests
+        name: xUnit Tests (UI Report)
         path: '**/test-results.trx'
         reporter: dotnet-trx
-        fail-on-error: 'true'
-        # Keep your other options here:
-        path-replace-backslashes: false
-        list-suites: all
-        list-tests: all
-        max-annotations: 10
-        fail-on-empty: true
-        only-summary: false
-        token: ${{ secrets.GITHUB_TOKEN }} # Usually implied, but doesn't hurt to be explicit if needed
+        fail-on-error: 'true' # Fail the Check Run if tests failed, but workflow continues
+
+    # --- New Steps to Update README ---
+
+    - name: Parse Test Results and Update README
+      # Only run this step if the test step produced a result file
+      if: steps.tests.outcome == 'success' || steps.tests.outcome == 'failure'
+      shell: pwsh # Use PowerShell
+      run: |
+        $trxFile = "test-results.trx"
+        $readmeFile = "README.md"
+        $startMarker = ""
+        $endMarker = ""
+
+        if (-not (Test-Path $trxFile)) {
+          Write-Error "Test results file ($trxFile) not found."
+          exit 1
+        }
+
+        # Load TRX file
+        [xml]$trx = Get-Content $trxFile
+
+        # Find the summary node (adjust XPath if TRX structure differs)
+        $summary = $trx.TestRun.ResultSummary
+
+        # Extract counts
+        $total = $summary.Counters.total
+        $passed = $summary.Counters.passed
+        $failed = $summary.Counters.failed
+        # Handle potential missing attributes if no tests run etc.
+        if ($null -eq $total) {$total = 0}
+        if ($null -eq $passed) {$passed = 0}
+        if ($null -eq $failed) {$failed = 0}
+
+        # Determine overall outcome for emoji
+        $outcome = $summary.outcome
+        $statusEmoji = ""
+        if ($outcome -eq "Failed") {
+          $statusEmoji = "❌"
+        } elseif ($outcome -eq "Passed") {
+          $statusEmoji = "✅"
+        } else {
+          $statusEmoji = "❓" # Or handle other outcomes
+        }
+
+        # Format the results as Markdown
+        $newSummary = @"
+        $statusEmoji **Latest Run:** ($outcome)
+        * Total Tests: $total
+        * Passed: $passed
+        * Failed: $failed
+        (Updated: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss UTC'))
+        "@
+
+        Write-Host "Generated Summary:"
+        Write-Host $newSummary
+
+        # Read README content
+        $readmeContent = Get-Content $readmeFile -Raw
+
+        # Find marker positions
+        $startIndex = $readmeContent.IndexOf($startMarker)
+        $endIndex = $readmeContent.IndexOf($endMarker)
+
+        if ($startIndex -eq -1 -or $endIndex -eq -1 -or $startIndex -ge $endIndex) {
+          Write-Error "Start/End markers not found or invalid in $readmeFile."
+          exit 1
+        }
+
+        # Build the new README content
+        $startContent = $readmeContent.Substring(0, $startIndex + $startMarker.Length)
+        $endContent = $readmeContent.Substring($endIndex)
+        $finalContent = $startContent + "`n" + $newSummary + "`n" + $endContent
+
+        # Write the updated content back to README.md
+        Set-Content -Path $readmeFile -Value $finalContent -NoNewline
+        Write-Host "$readmeFile updated successfully."
+
+    - name: Commit and Push README changes
+      # Only run if the previous step succeeded AND if we are on the main branch
+      if: success() && github.ref == 'refs/heads/main'
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        # Check if README.md has changed
+        if git diff --quiet README.md; then
+          echo "No changes to README.md to commit."
+        else
+          echo "Changes detected in README.md. Committing..."
+          git add README.md
+          # Add [skip ci] to prevent triggering another workflow run
+          git commit -m "docs: Update test results summary in README [skip ci]"
+          git push
+        fi
