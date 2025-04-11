@@ -564,7 +564,7 @@ namespace UmbralEmpires.Tests.DataLoading
                 RequiresTechnology = new List<TechRequirement> { new("Computer", 2) },
                 EconomyBonus = 1,
                 IsAdvanced = false,
-                BaseConstructionBonus = 2 // Expecting this value
+                BaseConstructionBonus = 2
             };
 
             IDefinitionLoader loader = new JsonDefinitionLoader();
