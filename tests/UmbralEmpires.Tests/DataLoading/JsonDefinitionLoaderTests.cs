@@ -138,5 +138,48 @@ namespace UmbralEmpires.Tests.DataLoading
             // --- TEMPORARY Assert if needed ---
             // Assert.True(false, "Verify implementation throws exception on invalid JSON.");
         }
+
+        [Fact]
+        public void LoadStructures_Should_Skip_Object_With_Missing_Required_Property_And_Load_Valid_Ones()
+        {
+            // Arrange -----
+            var jsonInput = """
+            [
+              {
+                "Name": "Structure Missing ID", // ID is missing
+                "BaseCreditsCost": 5
+              },
+              {
+                "Id": "ResearchLabs",
+                "Name": "Research Labs",
+                "BaseCreditsCost": 2 // This one is valid (based on minimal props)
+              }
+            ]
+            """;
+
+            // We only expect the valid structure to be loaded
+            var expectedValidStructure = new StructureDefinition
+            {
+                Id = "ResearchLabs",
+                Name = "Research Labs",
+                BaseCreditsCost = 2
+            };
+
+            IDefinitionLoader loader = new JsonDefinitionLoader();
+
+            // Act -----
+            IEnumerable<StructureDefinition> result = loader.LoadStructures(jsonInput);
+
+            // Assert -----
+            result.Should().NotBeNull();
+            // Should only contain the valid structure, the one missing 'Id' should be skipped
+            result.Should().ContainSingle().Which.Should().BeEquivalentTo(expectedValidStructure);
+
+            // Ideally, we might also assert that a warning was logged, but testing logging can be complex.
+            // For now, just ensuring the invalid one is skipped is the primary goal.
+
+            // --- TEMPORARY Assert if needed ---
+            // Assert.True(false, "Verify implementation skips objects with missing required properties.");
+        }
     }
 }
