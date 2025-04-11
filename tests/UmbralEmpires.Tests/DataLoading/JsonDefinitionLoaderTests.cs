@@ -579,5 +579,56 @@ namespace UmbralEmpires.Tests.DataLoading
             // --- TEMPORARY Assert if needed ---
             // Assert.True(false, "Verify BaseConstructionBonus is loaded.");
         }
+
+        [Fact]
+        public void LoadStructures_Should_Load_BaseProductionBonus()
+        {
+            // Arrange -----
+            // Using Shipyards which grant +2 Production bonus according to GDD list/descriptions
+            var jsonInput = """
+            [
+              {
+                "Id": "Shipyards",
+                "Name": "Shipyards",
+                "BaseCreditsCost": 5,
+                "EnergyRequirementPerLevel": 0,
+                "PopulationRequirementPerLevel": 1,
+                "AreaRequirementPerLevel": 1,
+                "RequiresTechnology": [], 
+                "EconomyBonus": 1,
+                "IsAdvanced": false,
+                "BaseConstructionBonus": 0, 
+                "BaseProductionBonus": 2
+              }
+            ]
+            """;
+
+            var expectedStructure = new StructureDefinition
+            {
+                Id = "Shipyards",
+                Name = "Shipyards",
+                BaseCreditsCost = 5,
+                EnergyRequirementPerLevel = 0,
+                PopulationRequirementPerLevel = 1,
+                AreaRequirementPerLevel = 1,
+                RequiresTechnology = new List<TechRequirement>(),
+                EconomyBonus = 1,
+                IsAdvanced = false,
+                BaseConstructionBonus = 0,
+                BaseProductionBonus = 2 // Expecting this value
+            };
+
+            IDefinitionLoader loader = new JsonDefinitionLoader();
+
+            // Act -----
+            IEnumerable<StructureDefinition> result = loader.LoadStructures(jsonInput);
+
+            // Assert -----
+            result.Should().NotBeNull();
+            result.Should().ContainSingle().Which.Should().BeEquivalentTo(expectedStructure);
+
+            // --- TEMPORARY Assert if needed ---
+            // Assert.True(false, "Verify BaseProductionBonus is loaded.");
+        }
     }
 }
