@@ -10,7 +10,7 @@ on:
 
 jobs:
   build-test-readme:
-    runs-on: ubuntu-latest # Or windows-latest if preferred, script should be compatible
+    runs-on: ubuntu-latest # Or windows-latest if preferred
 
     # Permissions needed for the steps below
     permissions:
@@ -25,7 +25,7 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: '9.0.x' # Adjust to your project's .NET version
+        dotnet-version: '8.0.x' # Adjust to your project's .NET version
 
     - name: Restore dependencies
       run: dotnet restore
@@ -66,8 +66,8 @@ jobs:
 
         # --- Define README and Markers ---
         $readmeFile = "README.md"
-        $startMarker = "<!-- TEST-RESULTS-START -->"
-        $endMarker = "<!-- TEST-RESULTS-END -->"
+        $startMarker = "<!-- TEST-RESULTS-START -->" # Ensure this EXACTLY matches your README
+        $endMarker = "<!-- TEST-RESULTS-END -->"     # Ensure this EXACTLY matches your README
 
         # --- Load and Parse TRX File ---
         try {
@@ -140,7 +140,8 @@ jobs:
 
         # Write the updated content back to README.md
         try {
-          Set-Content -Path $readmeFile -Value $finalContent -NoNewline -Encoding UTF8 # Specify encoding
+          # Ensure using UTF8 encoding, especially if emojis are involved
+          Set-Content -Path $readmeFile -Value $finalContent -NoNewline -Encoding UTF8
           Write-Host "$readmeFile updated successfully."
         } catch {
           Write-Error "Error writing updated content to '$readmeFile': $_"
@@ -151,18 +152,28 @@ jobs:
     - name: Commit and Push README changes
       # Run only if the previous step succeeded AND we are on the main branch push event
       if: success() && github.ref == 'refs/heads/main' && github.event_name == 'push'
+      # Use bash shell for git commands
+      shell: bash
       run: |
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action Bot"
-        # Check if README.md has actually changed
-        if git diff --quiet HEAD -- $readmeFile; then
-          echo "No changes detected in $readmeFile."
+
+        # Define the filename directly in Bash or use the literal string
+        readme_file="README.md"
+
+        # Check if the specific file has actually changed
+        if git diff --quiet HEAD -- "$readme_file"; then
+          echo "No changes detected in $readme_file."
           exit 0 # Exit successfully, nothing to commit
         fi
 
-        echo "Changes detected in $readmeFile. Committing..."
-        git add $readmeFile
+        echo "Changes detected in $readme_file. Committing..."
+        # Add the specific file
+        git add "$readme_file"
+
         # Add [skip ci] to the commit message to prevent this commit from triggering the workflow again
         git commit -m "docs: Update test results summary in README [skip ci]"
+
         echo "Pushing changes..."
-        git push origin main # Make sure 'main' matches your branch name
+        # Ensure 'main' matches your default branch name
+        git push origin main
