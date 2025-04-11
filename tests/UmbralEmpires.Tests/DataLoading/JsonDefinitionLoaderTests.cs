@@ -432,5 +432,51 @@ namespace UmbralEmpires.Tests.DataLoading
             // Assert.True(false, "Verify EconomyBonus is loaded.");
         }
 
+        [Fact]
+        public void LoadStructures_Should_Load_IsAdvanced_Flag()
+        {
+            // Arrange -----
+            // Using Nanite Factories which are marked as Advanced ('x') in GDD
+            var jsonInput = """
+            [
+              {
+                "Id": "NaniteFactories",
+                "Name": "Nanite Factories",
+                "BaseCreditsCost": 80,
+                "EnergyRequirementPerLevel": 0, // Assuming defaults if not specified or relevant
+                "PopulationRequirementPerLevel": 1,
+                "AreaRequirementPerLevel": 1,
+                "RequiresTechnology": [ { "TechId": "Computer", "Level": 10 }, { "TechId": "Laser", "Level": 8 } ], // Example Req
+                "EconomyBonus": 2,
+                "IsAdvanced": true // Expecting standard boolean in JSON
+              }
+            ]
+            """;
+
+            var expectedStructure = new StructureDefinition
+            {
+                Id = "NaniteFactories",
+                Name = "Nanite Factories",
+                BaseCreditsCost = 80,
+                EnergyRequirementPerLevel = 0,
+                PopulationRequirementPerLevel = 1,
+                AreaRequirementPerLevel = 1,
+                RequiresTechnology = new List<TechRequirement> { new("Computer", 10), new("Laser", 8) },
+                EconomyBonus = 2,
+                IsAdvanced = true // Expecting this value
+            };
+
+            IDefinitionLoader loader = new JsonDefinitionLoader();
+
+            // Act -----
+            IEnumerable<StructureDefinition> result = loader.LoadStructures(jsonInput);
+
+            // Assert -----
+            result.Should().NotBeNull();
+            result.Should().ContainSingle().Which.Should().BeEquivalentTo(expectedStructure);
+
+            // --- TEMPORARY Assert if needed ---
+            // Assert.True(false, "Verify IsAdvanced flag is loaded.");
+        }
     }
 }
