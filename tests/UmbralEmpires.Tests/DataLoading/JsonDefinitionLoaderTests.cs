@@ -132,8 +132,8 @@ namespace UmbralEmpires.Tests.DataLoading
             // Assert -----
             // Assert that the action throws the expected exception
             // System.Text.Json typically throws JsonException for parsing errors
-            act.Should().Throw<JsonException>()
-               .WithMessage("*invalid JSON*"); // Optional: Check exception message contains relevant info
+            // removed .WithMessage("*invalid JSON*") to avoid hardcoding error messages
+            act.Should().Throw<JsonException>();
 
             // --- TEMPORARY Assert if needed ---
             // Assert.True(false, "Verify implementation throws exception on invalid JSON.");
