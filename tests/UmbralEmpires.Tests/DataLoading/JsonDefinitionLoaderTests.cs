@@ -67,5 +67,45 @@ namespace UmbralEmpires.Tests.DataLoading
             // --- TEMPORARY Assert if needed until code verified ---
             // Assert.True(false, "Verify implementation handles empty array correctly.");
         }
+
+        [Fact]
+        public void LoadStructures_Should_Load_Multiple_Simple_Structures_From_Json()
+        {
+            // Arrange -----
+            var jsonInput = """
+            [
+              {
+                "Id": "UrbanStructures",
+                "Name": "Urban Structures",
+                "BaseCreditsCost": 1
+              },
+              {
+                "Id": "ResearchLabs",
+                "Name": "Research Labs",
+                "BaseCreditsCost": 2
+              }
+            ]
+            """;
+
+            var expectedStructures = new List<StructureDefinition>
+            {
+                new StructureDefinition { Id = "UrbanStructures", Name = "Urban Structures", BaseCreditsCost = 1 },
+                new StructureDefinition { Id = "ResearchLabs", Name = "Research Labs", BaseCreditsCost = 2 }
+            };
+
+            IDefinitionLoader loader = new JsonDefinitionLoader();
+
+            // Act -----
+            IEnumerable<StructureDefinition> result = loader.LoadStructures(jsonInput);
+
+            // Assert -----
+            result.Should().NotBeNull();
+            result.Should().HaveCount(2); // Verify we loaded two items
+            // BeEquivalentTo checks if the collections contain the same items, ignoring order by default
+            result.Should().BeEquivalentTo(expectedStructures);
+
+            // --- TEMPORARY Assert if needed ---
+            // Assert.True(false, "Verify implementation handles multiple items correctly.");
+        }
     }
 }
