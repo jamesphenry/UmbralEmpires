@@ -738,5 +738,62 @@ namespace UmbralEmpires.Tests.DataLoading
             // --- TEMPORARY Assert if needed ---
             // Assert.True(false, "Verify UsesMetal flag is loaded.");
         }
+
+        [Fact]
+        public void LoadStructures_Should_Load_UsesGas_Flag()
+        {
+            // Arrange -----
+            // Using Gas Plants which should use Gas potential
+            var jsonInput = """
+            [
+              {
+                "Id": "GasPlants",
+                "Name": "Gas Plants",
+                "BaseCreditsCost": 1,
+                "EnergyRequirementPerLevel": 0, 
+                "PopulationRequirementPerLevel": 0, 
+                "AreaRequirementPerLevel": 1,
+                "RequiresTechnology": [],
+                "EconomyBonus": 0,
+                "IsAdvanced": false,
+                "BaseConstructionBonus": 0,
+                "BaseProductionBonus": 0,
+                "BaseResearchBonus": 0,
+                "UsesMetal": false,
+                "UsesGas": true
+              }
+            ]
+            """;
+
+            var expectedStructure = new StructureDefinition
+            {
+                Id = "GasPlants",
+                Name = "Gas Plants",
+                BaseCreditsCost = 1,
+                EnergyRequirementPerLevel = 0,
+                PopulationRequirementPerLevel = 0,
+                AreaRequirementPerLevel = 1,
+                RequiresTechnology = new List<TechRequirement>(),
+                EconomyBonus = 0,
+                IsAdvanced = false,
+                BaseConstructionBonus = 0,
+                BaseProductionBonus = 0,
+                BaseResearchBonus = 0,
+                UsesMetal = false,
+                UsesGas = true // Expecting this value
+            };
+
+            IDefinitionLoader loader = new JsonDefinitionLoader();
+
+            // Act -----
+            IEnumerable<StructureDefinition> result = loader.LoadStructures(jsonInput);
+
+            // Assert -----
+            result.Should().NotBeNull();
+            result.Should().ContainSingle().Which.Should().BeEquivalentTo(expectedStructure);
+
+            // --- TEMPORARY Assert if needed ---
+            // Assert.True(false, "Verify UsesGas flag is loaded.");
+        }
     }
 }
