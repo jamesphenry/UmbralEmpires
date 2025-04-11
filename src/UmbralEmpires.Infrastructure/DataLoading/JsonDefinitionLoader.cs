@@ -19,40 +19,48 @@ public class JsonDefinitionLoader : IDefinitionLoader
 
         try
         {
-            var options = new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            };
-            // Step 1: Deserialize the whole list (might contain invalid items)
+            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
             var initialList = JsonSerializer.Deserialize<List<StructureDefinition>>(jsonContent, options);
 
             if (initialList == null)
             {
+                Console.WriteLine("DEBUG: Deserialization resulted in null initialList.");
                 return Enumerable.Empty<StructureDefinition>();
             }
 
-            // --- NEW SECTION: Validation/Filtering ---
-            // Step 2: Filter the list to include only valid definitions
-            // Basic validation: Ensure required 'Id' property is present.
-            // This implements the core idea of the IsValid() check from pseudocode for this specific test.
-            var validList = initialList
-                .Where(structure => !string.IsNullOrWhiteSpace(structure.Id))
-                .ToList(); // Convert back to List or keep as IEnumerable
-
-            // Log warnings for skipped items? Could be added here or in validation logic.
-            if (validList.Count < initialList.Count)
+            // ---> Add Enhanced Debugging <---
+            Console.WriteLine($"DEBUG: Initial count: {initialList.Count}");
+            // Use a loop for safer checking in case deserialization created null entries (unlikely but possible)
+            for (int i = 0; i < initialList.Count; i++)
             {
-                Console.WriteLine($"Warning: Skipped {initialList.Count - validList.Count} structure(s) due to missing required properties (e.g., Id)."); // Basic logging
+                var item = initialList[i];
+                var idValue = item?.Id ?? "NULL_ITEM_ID"; // Handle null item just in case
+                var isIdNullOrWhitespace = string.IsNullOrWhiteSpace(idValue);
+                Console.WriteLine($"DEBUG: Initial item {i} -> Id: '{idValue}', IsNullOrWhiteSpace(Id): {isIdNullOrWhitespace}");
             }
-            // --- END NEW SECTION ---
+            // ---> End Enhanced Debugging <---
 
-            // Step 3: Return the filtered list
+            var validList = initialList
+                .Where(structure => structure != null && !string.IsNullOrWhiteSpace(structure.Id)) // Added null check on structure for safety
+                .ToList();
+
+            // Optional logging...
+            if (validList.Count < initialList.Count) { /* ... logging ... */ }
+
+            // ---> Add Debug Line Before Return <---
+            Console.WriteLine($"DEBUG: Filtered count: {validList.Count}");
+            for (int i = 0; i < validList.Count; i++)
+            {
+                Console.WriteLine($"DEBUG: Filtered item {i} -> Id: '{validList[i]?.Id ?? "NULL_ITEM_ID"}'");
+            }
+            // ---> End Debug Line Before Return <---
+
             return validList;
         }
         catch (JsonException ex)
         {
-            Console.WriteLine($"Error deserializing structure definitions: {ex.Message}");
-            throw; // Re-throw as per previous test
+            // ... exception handling ...
+            throw;
         }
     }
 }
