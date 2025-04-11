@@ -15,4 +15,6 @@ public record StructureDefinition
     public bool IsAdvanced { get; init; }
     public int BaseConstructionBonus { get; init; }
     public int BaseProductionBonus { get; init; }
+    public int BaseResearchBonus { get; init; }
+
 }
