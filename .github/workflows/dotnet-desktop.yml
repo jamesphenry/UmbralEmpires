@@ -75,7 +75,7 @@ jobs:
         $counters = $summary.Counters
         $outcome = $summary.outcome
 
-        $detailedReport = "# Test Run Report (`$((Get-Date).ToString('yyyy-MM-dd HH:mm:ss')) UTC`)"
+        $detailedReport = "# Test Run Report ($(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') UTC)"
         $detailedReport += "`n`n## Summary`n"
         $detailedReport += "* **Overall Outcome:** $outcome`n"
         $detailedReport += "* Total Tests: $($counters.total)`n"
