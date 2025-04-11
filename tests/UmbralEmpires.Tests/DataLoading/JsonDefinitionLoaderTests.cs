@@ -646,10 +646,10 @@ namespace UmbralEmpires.Tests.DataLoading
                 "PopulationRequirementPerLevel": 1,
                 "AreaRequirementPerLevel": 1,
                 "RequiresTechnology": [],
-                "EconomyBonus": 0, // Assuming no direct economy bonus
+                "EconomyBonus": 0,
                 "IsAdvanced": false,
-                "BaseConstructionBonus": 0, // Assuming no direct const bonus
-                "BaseProductionBonus": 0, // Assuming no direct prod bonus
+                "BaseConstructionBonus": 0,
+                "BaseProductionBonus": 0,
                 "BaseResearchBonus": 8
               }
             ]
