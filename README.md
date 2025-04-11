@@ -6,12 +6,12 @@
 ## Test Results
 
 <!-- TEST-RESULTS-START -->
-# Test Run Report (2025-04-11 07:07:15 UTC)
+# Test Run Report (2025-04-11 07:11:19 UTC)
 
 ## Summary
 * **Overall Outcome:** Completed
-* Total Tests: 2
-* Passed: 2
+* Total Tests: 3
+* Passed: 3
 * Failed: 0
 
 ## Details
@@ -21,6 +21,7 @@
 |-----------|---------|---------------|---------------|
 | LoadStructures_Should_Load_Single_Simple_Structure_From_Json | Passed | 0 | - |
 | LoadStructures_Should_Return_Empty_List_For_Empty_Json_Array | Passed | 0 | - |
+| LoadStructures_Should_Load_Multiple_Simple_Structures_From_Json | Passed | 0 | - |
 
 <!-- TEST-RESULTS-END -->
 
