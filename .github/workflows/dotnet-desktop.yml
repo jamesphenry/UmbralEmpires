@@ -40,9 +40,12 @@ jobs:
           end-value: "<!-- test_results_end -->"
 
       - name: Commit and Push README.md
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "voidborn-bot"
+          git config user.email "bot@umbral.dev"
+          git remote set-url origin https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}
           git add README.md
           git diff --quiet && git diff --staged --quiet || git commit -m "chore: update README with test results"
           git push
