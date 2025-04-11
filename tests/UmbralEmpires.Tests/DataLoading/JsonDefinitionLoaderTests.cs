@@ -542,12 +542,12 @@ namespace UmbralEmpires.Tests.DataLoading
                 "Id": "RoboticFactories",
                 "Name": "Robotic Factories",
                 "BaseCreditsCost": 5,
-                "EnergyRequirementPerLevel": 0, // Assuming
+                "EnergyRequirementPerLevel": 0,
                 "PopulationRequirementPerLevel": 1,
                 "AreaRequirementPerLevel": 1,
                 "RequiresTechnology": [ { "TechId": "Computer", "Level": 2 } ],
                 "EconomyBonus": 1,
-                "IsAdvanced": false, // Not marked advanced in GDD
+                "IsAdvanced": false,
                 "BaseConstructionBonus": 2
               }
             ]
