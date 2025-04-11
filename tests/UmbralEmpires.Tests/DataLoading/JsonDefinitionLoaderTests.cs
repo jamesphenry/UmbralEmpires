@@ -386,5 +386,51 @@ namespace UmbralEmpires.Tests.DataLoading
             // --- TEMPORARY Assert if needed ---
             // Assert.True(false, "Verify RequiresTechnology list is loaded.");
         }
+
+        [Fact]
+        public void LoadStructures_Should_Load_EconomyBonus()
+        {
+            // Arrange -----
+            // Using Metal Refineries which have Economy 1 according to GDD Structure List
+            var jsonInput = """
+            [
+              {
+                "Id": "MetalRefineries",
+                "Name": "Metal Refineries",
+                "BaseCreditsCost": 1,
+                "EnergyRequirementPerLevel": 0, // Assuming 0 default
+                "PopulationRequirementPerLevel": 1,
+                "AreaRequirementPerLevel": 1,
+                "RequiresTechnology": [], // Assuming none
+                "EconomyBonus": 1
+              }
+            ]
+            """;
+
+            var expectedStructure = new StructureDefinition
+            {
+                Id = "MetalRefineries",
+                Name = "Metal Refineries",
+                BaseCreditsCost = 1,
+                EnergyRequirementPerLevel = 0,
+                PopulationRequirementPerLevel = 1,
+                AreaRequirementPerLevel = 1,
+                RequiresTechnology = new List<TechRequirement>(),
+                EconomyBonus = 1 // Expecting this value
+            };
+
+            IDefinitionLoader loader = new JsonDefinitionLoader();
+
+            // Act -----
+            IEnumerable<StructureDefinition> result = loader.LoadStructures(jsonInput);
+
+            // Assert -----
+            result.Should().NotBeNull();
+            result.Should().ContainSingle().Which.Should().BeEquivalentTo(expectedStructure);
+
+            // --- TEMPORARY Assert if needed ---
+            // Assert.True(false, "Verify EconomyBonus is loaded.");
+        }
+
     }
 }
