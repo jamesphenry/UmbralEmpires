@@ -11,5 +11,5 @@ public record StructureDefinition
     public int PopulationRequirementPerLevel { get; init; }
     public int AreaRequirementPerLevel { get; init; }
     public List<TechRequirement> RequiresTechnology { get; init; } = new();
-
+    public int EconomyBonus { get; init; }
 }
