@@ -446,8 +446,7 @@ namespace UmbralEmpires.Tests.DataLoading
                 "EnergyRequirementPerLevel": 0,
                 "PopulationRequirementPerLevel": 1,
                 "AreaRequirementPerLevel": 1,
-                "RequiresTechnology": [ { "TechId": "Computer", "Level": 10 }, { "TechId": "Laser", "Level": 8 } ], // Example Req
-                "EconomyBonus": 2,
+                "RequiresTechnology": [ { "TechId": "Computer", "Level": 10 }, { "TechId": "Laser", "Level": 8 } ],
                 "IsAdvanced": true
               }
             ]
