@@ -28,32 +28,13 @@ public class JsonDefinitionLoader : IDefinitionLoader
                 return Enumerable.Empty<StructureDefinition>();
             }
 
-            // ---> Add Enhanced Debugging <---
-            Console.WriteLine($"DEBUG: Initial count: {initialList.Count}");
-            // Use a loop for safer checking in case deserialization created null entries (unlikely but possible)
-            for (int i = 0; i < initialList.Count; i++)
-            {
-                var item = initialList[i];
-                var idValue = item?.Id ?? "NULL_ITEM_ID"; // Handle null item just in case
-                var isIdNullOrWhitespace = string.IsNullOrWhiteSpace(idValue);
-                Console.WriteLine($"DEBUG: Initial item {i} -> Id: '{idValue}', IsNullOrWhiteSpace(Id): {isIdNullOrWhitespace}");
-            }
-            // ---> End Enhanced Debugging <---
-
             var validList = initialList
-                .Where(structure => structure != null && !string.IsNullOrWhiteSpace(structure.Id)) // Added null check on structure for safety
-                .ToList();
+                        .Where(IsValidStructure) // Use the helper method
+                        .ToList();
 
             // Optional logging...
             if (validList.Count < initialList.Count) { /* ... logging ... */ }
 
-            // ---> Add Debug Line Before Return <---
-            Console.WriteLine($"DEBUG: Filtered count: {validList.Count}");
-            for (int i = 0; i < validList.Count; i++)
-            {
-                Console.WriteLine($"DEBUG: Filtered item {i} -> Id: '{validList[i]?.Id ?? "NULL_ITEM_ID"}'");
-            }
-            // ---> End Debug Line Before Return <---
 
             return validList;
         }
@@ -63,4 +44,16 @@ public class JsonDefinitionLoader : IDefinitionLoader
             throw;
         }
     }
+
+    private bool IsValidStructure(StructureDefinition? structure)
+    {
+        if (structure == null) return false;
+        if (string.IsNullOrWhiteSpace(structure.Id)) return false;
+        // Add more checks here later...
+        // if (string.IsNullOrWhiteSpace(structure.Name)) return false;
+        // if (structure.BaseCreditsCost < 0) return false;
+        return true;
+    }
+
+
 }

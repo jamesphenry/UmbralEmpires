@@ -181,5 +181,46 @@ namespace UmbralEmpires.Tests.DataLoading
             // --- TEMPORARY Assert if needed ---
             // Assert.True(false, "Verify implementation skips objects with missing required properties.");
         }
+
+        [Fact]
+        public void LoadStructures_Should_Skip_Object_With_Negative_Cost()
+        {
+            // Arrange -----
+            var jsonInput = """
+            [
+              {
+                "Id": "NegativeCostStructure",
+                "Name": "Invalid Structure",
+                "BaseCreditsCost": -10 // Invalid cost
+              },
+              {
+                "Id": "ValidCostStructure",
+                "Name": "Valid Structure",
+                "BaseCreditsCost": 10 // Valid cost
+              }
+            ]
+            """;
+
+            // We only expect the valid structure to be loaded
+            var expectedValidStructure = new StructureDefinition
+            {
+                Id = "ValidCostStructure",
+                Name = "Valid Structure",
+                BaseCreditsCost = 10
+            };
+
+            IDefinitionLoader loader = new JsonDefinitionLoader();
+
+            // Act -----
+            IEnumerable<StructureDefinition> result = loader.LoadStructures(jsonInput);
+
+            // Assert -----
+            result.Should().NotBeNull();
+            // Should only contain the structure with the valid cost
+            result.Should().ContainSingle().Which.Should().BeEquivalentTo(expectedValidStructure);
+
+            // --- TEMPORARY Assert if needed ---
+            // Assert.True(false, "Verify implementation skips objects with negative costs.");
+        }
     }
 }
