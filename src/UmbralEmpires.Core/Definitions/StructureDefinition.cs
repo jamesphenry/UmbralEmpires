@@ -9,6 +9,7 @@ public record StructureDefinition
     public string Name { get; init; } = string.Empty;
     public int BaseCreditsCost { get; init; }
     public int EnergyRequirementPerLevel { get; init; }
+    public int PopulationRequirementPerLevel { get; init; }
 
     // We'll add other properties (Requirements, Bonuses, etc.) in later TDD cycles
 }
