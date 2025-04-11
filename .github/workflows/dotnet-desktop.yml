@@ -66,8 +66,8 @@ jobs:
 
         # --- Define README and Markers ---
         $readmeFile = "README.md"
-        $startMarker = "" # Ensure this EXACTLY matches your README
-        $endMarker = ""     # Ensure this EXACTLY matches your README
+        $startMarker = "<!-- TEST-RESULTS-START -->"
+        $endMarker = "<!-- TEST-RESULTS-END -->"
 
         # --- Load and Parse TRX File ---
         try {
