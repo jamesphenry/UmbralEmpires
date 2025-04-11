@@ -146,13 +146,13 @@ namespace UmbralEmpires.Tests.DataLoading
             var jsonInput = """
             [
               {
-                "Name": "Structure Missing ID", // ID is missing
+                "Name": "Structure Missing ID", 
                 "BaseCreditsCost": 5
               },
               {
                 "Id": "ResearchLabs",
                 "Name": "Research Labs",
-                "BaseCreditsCost": 2 // This one is valid (based on minimal props)
+                "BaseCreditsCost": 2 
               }
             ]
             """;
