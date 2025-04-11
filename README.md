@@ -14,9 +14,11 @@
 * Failed: 0
 
 ## Details
+
+### [](#)
 | Test Name | Outcome | Duration (ms) | Error Message |
 |-----------|---------|---------------|---------------|
-| UmbralEmpires.Tests.DataLoading.JsonDefinitionLoaderTests.LoadStructures_Should_Load_Single_Simple_Structure_From_Json | Passed | 0 | - |
+| LoadStructures_Should_Load_Single_Simple_Structure_From_Json | Passed | 0 | - |
 
 <!-- TEST-RESULTS-END -->
 *Summary will be automatically updated here.*
