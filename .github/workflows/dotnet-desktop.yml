@@ -1,81 +1,65 @@
 # .github/workflows/dotnet.yml
 
-# Updated name to reflect detailed README report
 name: .NET Build, Test, and Update Detailed README Report
 
-# Trigger only on pushes to the main branch
 on:
   push:
     branches:
-      - main # Or master, or your default branch name
+      - main
 
 jobs:
   build-test-readme:
-    runs-on: ubuntu-latest # Or windows-latest if preferred
+    runs-on: ubuntu-latest
 
-    # Permissions needed for the steps below
     permissions:
-      checks: write      # For dorny/test-reporter to create Check Runs (optional)
-      contents: write    # For actions/checkout AND for pushing README changes
+      checks: write
+      contents: write
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-      # No 'path' needed, checkout to default location
 
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: '9.0.x' # Your specified .NET version
-      # No working-directory needed
+        dotnet-version: '9.0.x'
 
     - name: Restore dependencies
       run: dotnet restore
-      # No working-directory needed
 
     - name: Build
       run: dotnet build --no-restore --configuration Release
-      # No working-directory needed
 
     - name: Run Tests
-      id: tests # Give the step an ID to check its outcome later
+      id: tests
       run: dotnet test --no-build --configuration Release --verbosity normal --logger "trx;LogFileName=test-results.trx"
-      # Continue workflow even if tests fail, so we can report the failure
       continue-on-error: true
-      # No working-directory needed
 
-    # Optional: Use dorny/test-reporter for the nice UI summary in Checks tab
     - name: Generate Test Report Summary (UI)
       uses: dorny/test-reporter@v1
-      if: always() # Ensures this runs even if test step fails/continues
+      if: always()
       with:
-        name: xUnit Tests (UI Report) # Name for the Check Run
-        path: '**/test-results.trx'    # Path pattern to find TRX files (default checkout)
-        reporter: dotnet-trx           # Type of test report
-        fail-on-error: 'true'          # Mark Check Run as failed if tests failed
+        name: xUnit Tests (UI Report)
+        path: '**/test-results.trx'
+        reporter: dotnet-trx
+        fail-on-error: 'true'
 
-    # --- Step to Update README with DETAILED Report ---
     - name: Parse Test Results and Update README with Detailed Report
-      # Run this step only if tests were attempted (succeeded or failed)
       if: steps.tests.outcome == 'success' || steps.tests.outcome == 'failure'
-      shell: pwsh # Use PowerShell for cross-platform compatibility
+      shell: pwsh
       run: |
-        # --- Find the TRX file ---
         $trxFiles = Get-ChildItem -Path . -Recurse -Filter "test-results.trx" | Select-Object -First 1
         if ($null -eq $trxFiles) {
-          Write-Error "Test results file (test-results.trx) not found anywhere in the workspace."
+          Write-Error "Test results file (test-results.trx) not found."
           exit 1
         }
-        $trxFile = $trxFiles.FullName # Use the full path found
+        $trxFile = $trxFiles.FullName
         Write-Host "Found test results file at: $trxFile"
 
-        # --- Define README and Markers ---
         $readmeFile = "README.md"
-        # !! Double-check these markers match your README.md file !!
         $startMarker = "<!-- TEST-RESULTS-START -->"
         $endMarker = "<!-- TEST-RESULTS-END -->"
 
-        # --- Load and Parse TRX File ---
         try {
           [xml]$trx = Get-Content $trxFile
         } catch {
@@ -83,7 +67,6 @@ jobs:
           exit 1
         }
 
-        # --- Generate Detailed Report Content ---
         $summary = $trx.TestRun.ResultSummary
         if ($null -eq $summary) {
           Write-Error "Could not find ResultSummary node in TRX file."
@@ -92,54 +75,60 @@ jobs:
         $counters = $summary.Counters
         $outcome = $summary.outcome
 
-        # Start Markdown Content - Use a variable for the detailed report
         $detailedReport = "# Test Run Report (`$((Get-Date).ToString('yyyy-MM-dd HH:mm:ss')) UTC`)"
-        $detailedReport += "`n`n## Summary`n" # Keep the summary part too
+        $detailedReport += "`n`n## Summary`n"
         $detailedReport += "* **Overall Outcome:** $outcome`n"
         $detailedReport += "* Total Tests: $($counters.total)`n"
         $detailedReport += "* Passed: $($counters.passed)`n"
         $detailedReport += "* Failed: $($counters.failed)`n"
-        # Add other counters if needed (Skipped, etc.)
-
-        # Detailed Results Table
-        $detailedReport += "`n## Details`n"
-        $detailedReport += "| Test Name | Outcome | Duration (ms) | Error Message |`n"
-        $detailedReport += "|-----------|---------|---------------|---------------|`n"
 
         $results = $trx.TestRun.Results.UnitTestResult
-        # Ensure results is always an array
         if ($null -ne $results -and $results.GetType().Name -ne 'Object[]') { $results = @($results) }
 
+        $detailedReport += "`n## Details`n"
+
         if ($null -ne $results) {
-            # Sort results (e.g., failures first, then by name)
-            $sortedResults = $results | Sort-Object @{Expression={$_.outcome -ne 'Failed'}}, testName
-            foreach ($result in $sortedResults) {
-                $testName = $result.testName
+            $grouped = $results | Group-Object {
+              ($_?.testName -split '\.')[-2..-1] -join '.'
+            }
+
+            foreach ($group in $grouped | Sort-Object Name) {
+              $groupName = $group.Name
+              $nsParts = $groupName -split '\.'
+              $className = $nsParts[-1]
+              $namespace = ($nsParts[0..($nsParts.Length - 2)] -join '.')
+              $filename = "$className.cs"
+
+              $githubRepoUrl = "https://github.com/${{ github.repository }}"
+              $linkPath = "blob/main"
+              $searchPattern = "*/$filename"
+              $fileMatch = Get-ChildItem -Recurse -File -Filter $filename | Select-Object -First 1
+              $fileUrl = if ($fileMatch) { "$githubRepoUrl/$linkPath/$($fileMatch.FullName -replace '\\','/' -replace '^.*?/', '')" } else { "#" }
+
+              $detailedReport += "`n### [$groupName]($fileUrl)`n"
+              $detailedReport += "| Test Name | Outcome | Duration (ms) | Error Message |`n"
+              $detailedReport += "|-----------|---------|---------------|---------------|`n"
+
+              foreach ($result in $group.Group) {
+                $shortName = ($result.testName -split '\.')[-1]
                 $testOutcome = $result.outcome
-                # Handle potential missing duration
                 $durationMs = 0
                 try { $durationMs = [math]::Round(($result.duration | ConvertTo-TimeSpan).TotalMilliseconds) } catch {}
-                $errorMessage = "-" # Default
-
+                $errorMessage = "-"
                 if ($result.Output.ErrorInfo) {
-                    # Escape pipe chars for table, convert newlines to <br>
-                    $errorMessage = ($result.Output.ErrorInfo.Message | Out-String).Trim() -replace '\|','\|' -replace "`n","<br>" -replace "`r",""
-                    # Optional: Add Stack Trace in <details>
-                    # $stackTrace = ($result.Output.ErrorInfo.StackTrace | Out-String).Trim() -replace '\|','\|' -replace "`n","<br>" -replace "`r",""
-                    # $errorMessage += "<details><summary>Stack Trace</summary>$stackTrace</details>"
+                  $errorMessage = ($result.Output.ErrorInfo.Message | Out-String).Trim() `
+                      -replace '\|','\|' `
+                      -replace "`n","<br>" `
+                      -replace "`r",""
                 }
-                # Escape pipe chars in test name too
-                $detailedReport += "| $($testName -replace '\|','\|') | $testOutcome | $durationMs | $errorMessage |`n"
+
+                $detailedReport += "| $($shortName -replace '\|','\|') | $testOutcome | $durationMs | $errorMessage |`n"
+              }
             }
         } else {
-            $detailedReport += "| (No test results found) | - | - | - |`n"
+            $detailedReport += "`n(No test results found)`n"
         }
 
-        Write-Host "Generated Detailed Report Content."
-        # Uncomment the next line VERY carefully for debugging - it might print a LOT of text
-        # Write-Host $detailedReport
-
-        # --- Update README ---
         try {
           $readmeContent = Get-Content $readmeFile -Raw
         } catch {
@@ -155,13 +144,10 @@ jobs:
           exit 1
         }
 
-        # Build the new README content using the DETAILED report
         $startContent = $readmeContent.Substring(0, $startIndex + $startMarker.Length)
         $endContent = $readmeContent.Substring($endIndex)
-        # Inject the detailed report content here!
         $finalContent = $startContent + "`n" + $detailedReport + "`n" + $endContent
 
-        # Write the updated content back to README.md
         try {
           Set-Content -Path $readmeFile -Value $finalContent -NoNewline -Encoding UTF8
           Write-Host "$readmeFile updated successfully with detailed report."
@@ -170,8 +156,6 @@ jobs:
           exit 1
         }
 
-    # --- Step to Commit and Push ---
-    # This step remains the same as your last working version
     - name: Commit and Push README changes
       if: success() && github.ref == 'refs/heads/main' && github.event_name == 'push'
       shell: bash
@@ -185,7 +169,5 @@ jobs:
         fi
         echo "Changes detected in $readme_file. Committing..."
         git add "$readme_file"
-        # Commit message reflects detailed report now
         git commit -m "docs: Update detailed test results report in README [skip ci]"
-        echo "Pushing changes..."
         git push origin main
