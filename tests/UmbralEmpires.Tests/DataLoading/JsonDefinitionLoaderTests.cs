@@ -1,8 +1,5 @@
 // Add necessary using statements at the top of the file
-using Xunit;
 using FluentAssertions;
-using System.Collections.Generic;
-using System.Linq;
 using UmbralEmpires.Core.Definitions;       // Assuming this namespace for StructureDefinition
 using UmbralEmpires.Application.Interfaces; // Assuming this namespace for IDefinitionLoader
 using UmbralEmpires.Infrastructure.DataLoading; // Assuming this namespace for JsonDefinitionLoader
