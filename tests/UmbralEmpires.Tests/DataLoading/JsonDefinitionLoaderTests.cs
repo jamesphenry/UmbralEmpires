@@ -350,10 +350,10 @@ namespace UmbralEmpires.Tests.DataLoading
                 "Id": "FusionPlants",
                 "Name": "Fusion Plants",
                 "BaseCreditsCost": 20,
-                "EnergyRequirementPerLevel": 4, // Energy *consumed* per level
-                "PopulationRequirementPerLevel": 0, // Assuming 0 if not listed? Check GDD.
+                "EnergyRequirementPerLevel": 4,
+                "PopulationRequirementPerLevel": 0,
                 "AreaRequirementPerLevel": 1,
-                "RequiresTechnology": [ // Expecting a JSON array for the list
+                "RequiresTechnology": [
                   { "TechId": "Energy", "Level": 6 }
                 ]
               }
@@ -366,9 +366,9 @@ namespace UmbralEmpires.Tests.DataLoading
                 Name = "Fusion Plants",
                 BaseCreditsCost = 20,
                 EnergyRequirementPerLevel = 4,
-                PopulationRequirementPerLevel = 0, // Assuming default if not in JSON / GDD?
+                PopulationRequirementPerLevel = 0,
                 AreaRequirementPerLevel = 1,
-                RequiresTechnology = new List<TechRequirement> // Expecting the list
+                RequiresTechnology = new List<TechRequirement>
                 {
                     new TechRequirement("Energy", 6)
                 }
