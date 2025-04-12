@@ -1,7 +1,7 @@
 ﻿// src/UmbralEmpires.Infrastructure/DataLoading/JsonDefinitionLoader.cs
 using System;
 using System.Collections.Generic;
-using System.Linq; // Needed for LINQ Where clause
+using System.Linq; // Needed for LINQ
 using System.Text.Json;
 using UmbralEmpires.Application.Interfaces;
 using UmbralEmpires.Core.Definitions;
@@ -10,76 +10,198 @@ namespace UmbralEmpires.Infrastructure.DataLoading;
 
 public class JsonDefinitionLoader : IDefinitionLoader
 {
-    // --- NEW METHOD ---
+    // --- LoadAllDefinitions method ---
     public BaseModDefinitions LoadAllDefinitions(string jsonContent)
     {
         if (string.IsNullOrWhiteSpace(jsonContent))
         {
             Console.WriteLine("Warning: Definition content is empty, returning empty definitions.");
-            return new BaseModDefinitions(); // Return empty container
+            return new BaseModDefinitions();
         }
 
         try
         {
             var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-            // Deserialize the entire structure
             var loadedData = JsonSerializer.Deserialize<BaseModDefinitions>(jsonContent, options);
 
             if (loadedData == null)
             {
                 Console.WriteLine("Warning: Deserialization resulted in null BaseModDefinitions object.");
-                return new BaseModDefinitions(); // Return empty container
+                return new BaseModDefinitions();
             }
 
-            // --- Apply Validation/Filtering ---
-            // Filter Structures (using existing helper method)
+            // Filter Structures
             var initialStructureCount = loadedData.Structures?.Count ?? 0;
             var validStructures = loadedData.Structures?
-                                      .Where(IsValidStructure) // Apply validation
+                                      .Where(IsValidStructure)
                                       .ToList() ?? new List<StructureDefinition>();
             if (validStructures.Count < initialStructureCount)
                 Console.WriteLine($"Warning: Skipped {initialStructureCount - validStructures.Count} structure(s) due to validation errors.");
 
-            // Filter Technologies (using new helper method - create below)
+            // Filter Technologies
             var initialTechCount = loadedData.Technologies?.Count ?? 0;
             var validTechnologies = loadedData.Technologies?
-                                      .Where(IsValidTechnology) // Apply validation
+                                      .Where(IsValidTechnology)
                                       .ToList() ?? new List<TechnologyDefinition>();
             if (validTechnologies.Count < initialTechCount)
                 Console.WriteLine($"Warning: Skipped {initialTechCount - validTechnologies.Count} technology(s) due to validation errors.");
 
-            // ---> ADD Unit Validation <---
+            // Filter Units
             var initialUnitCount = loadedData.Units?.Count ?? 0;
             var validUnits = loadedData.Units?
-                                      .Where(IsValidUnit) // Apply validation
+                                      .Where(IsValidUnit) // Use the refactored validator
                                       .ToList() ?? new List<UnitDefinition>();
             if (validUnits.Count < initialUnitCount)
                 Console.WriteLine($"Warning: Skipped {initialUnitCount - validUnits.Count} unit(s) due to validation errors.");
-            // ---> END Unit Validation <---
 
-
-            // Filter Units... (when UnitDefinition exists)
-            // Filter Defenses... (when DefenseDefinition exists)
-
-
-            // Return a NEW object containing only the validated lists
-            return loadedData with // Using record "with" expression
+            // Return validated data
+            return loadedData with
             {
                 Structures = validStructures,
                 Technologies = validTechnologies,
                 Units = validUnits
-                // Assign validated lists for Units, Defenses etc. here later
             };
         }
         catch (JsonException ex)
         {
             Console.WriteLine($"Error deserializing base definitions: {ex.Message}");
-            // Re-throw to indicate catastrophic failure loading definitions
             throw new InvalidOperationException("Failed to load base game definitions due to invalid JSON.", ex);
         }
     }
 
-    // Existing helper for structures
+    // --- IsValidUnit and Helpers with Debug Logging ---
+
+    private bool IsValidUnit(UnitDefinition? unit)
+    {
+        Console.WriteLine($"--- IsValidUnit START: Checking unit {unit?.Id ?? "NULL"} ---");
+        if (unit == null)
+        {
+            Console.WriteLine("FAILED: Unit is null");
+            return false;
+        }
+
+        bool basicValid = ValidateUnitBasicProperties(unit);
+        Console.WriteLine($"--> Result ValidateUnitBasicProperties for {unit.Id}: {basicValid}");
+        if (!basicValid) return false;
+
+        bool shipyardValid = ValidateUnitRequiredShipyard(unit.RequiredShipyard);
+        Console.WriteLine($"--> Result ValidateUnitRequiredShipyard for {unit.Id}: {shipyardValid}");
+        if (!shipyardValid) return false;
+
+        bool techListValid = ValidateUnitRequiresTechnologyList(unit.RequiresTechnology);
+        Console.WriteLine($"--> Result ValidateUnitRequiresTechnologyList for {unit.Id}: {techListValid}");
+        if (!techListValid) return false;
+
+        bool driveTechValid = ValidateDriveTypeTechRequirements(unit);
+        Console.WriteLine($"--> Result ValidateDriveTypeTechRequirements for {unit.Id}: {driveTechValid}");
+        if (!driveTechValid) return false;
+
+        Console.WriteLine($"--- IsValidUnit END: Unit {unit.Id} PASSED ---");
+        return true;
+    }
+
+    private bool ValidateUnitBasicProperties(UnitDefinition unit)
+    {
+        Console.WriteLine($" ---> ValidateUnitBasicProperties START: Checking unit {unit.Id}");
+        if (string.IsNullOrWhiteSpace(unit.Id)) { Console.WriteLine($"FAILED: Basic Id is empty for {unit.Id}"); return false; }
+        if (string.IsNullOrWhiteSpace(unit.Name)) { Console.WriteLine($"FAILED: Basic Name is empty for {unit.Id}"); return false; }
+        if (string.IsNullOrWhiteSpace(unit.DriveType)) { Console.WriteLine($"FAILED: Basic DriveType is empty for {unit.Id}"); return false; }
+        if (string.IsNullOrWhiteSpace(unit.WeaponType)) { Console.WriteLine($"FAILED: Basic WeaponType is empty for {unit.Id}"); return false; }
+        if (unit.CreditsCost < 0) { Console.WriteLine($"FAILED: Basic CreditsCost is < 0 for {unit.Id}"); return false; }
+        if (unit.Attack < 0) { Console.WriteLine($"FAILED: Basic Attack is < 0 for {unit.Id}"); return false; }
+        if (unit.Armour < 0) { Console.WriteLine($"FAILED: Basic Armour is < 0 for {unit.Id}"); return false; }
+        if (unit.Shield < 0) { Console.WriteLine($"FAILED: Basic Shield is < 0 for {unit.Id}"); return false; }
+        if (unit.Hangar < 0) { Console.WriteLine($"FAILED: Basic Hangar is < 0 for {unit.Id}"); return false; }
+        if (unit.Speed < 0) { Console.WriteLine($"FAILED: Basic Speed is < 0 for {unit.Id}"); return false; }
+        Console.WriteLine($" ---> ValidateUnitBasicProperties END: Unit {unit.Id} PASSED");
+        return true;
+    }
+
+    private bool ValidateUnitRequiredShipyard(ShipyardRequirement? req)
+    {
+        Console.WriteLine($" ---> ValidateUnitRequiredShipyard START");
+        if (req == null) { Console.WriteLine("FAILED: ShipyardRequirement is null"); return false; }
+        if (req.BaseLevel < 0) { Console.WriteLine("FAILED: Shipyard BaseLevel < 0"); return false; }
+        if (req.OrbitalLevel < 0) { Console.WriteLine("FAILED: Shipyard OrbitalLevel < 0"); return false; }
+        Console.WriteLine($" ---> ValidateUnitRequiredShipyard END: PASSED");
+        return true;
+    }
+
+    private bool ValidateUnitRequiresTechnologyList(List<TechRequirement>? techReqs)
+    {
+        Console.WriteLine($" ---> ValidateUnitRequiresTechnologyList START");
+        if (techReqs == null)
+        {
+            Console.WriteLine($" ---> TechReqs list is null, skipping checks - PASSED");
+            return true;
+        }
+
+        int index = 0;
+        foreach (var requirement in techReqs)
+        {
+            if (requirement == null) { Console.WriteLine($"FAILED: TechReqs item at index {index} is null"); return false; }
+            if (string.IsNullOrWhiteSpace(requirement.TechId)) { Console.WriteLine($"FAILED: TechReqs item at index {index} has empty TechId"); return false; }
+            if (requirement.Level <= 0) { Console.WriteLine($"FAILED: TechReqs item at index {index} has Level <= 0 (TechId: {requirement.TechId})"); return false; }
+            index++;
+        }
+
+        var duplicateGroups = techReqs
+                            .GroupBy(r => r.TechId, StringComparer.OrdinalIgnoreCase)
+                            .Where(g => g.Count() > 1)
+                            .ToList();
+        if (duplicateGroups.Any())
+        {
+            Console.WriteLine($"FAILED: Found duplicate TechReqs TechIds: {string.Join(", ", duplicateGroups.Select(g => g.Key))}");
+            return false;
+        }
+
+        Console.WriteLine($" ---> ValidateUnitRequiresTechnologyList END: PASSED");
+        return true;
+    }
+
+    private bool ValidateDriveTypeTechRequirements(UnitDefinition unit)
+    {
+        Console.WriteLine($" ---> ValidateDriveTypeTechRequirements START: Unit {unit.Id}, Drive: {unit.DriveType}");
+        string driveType = unit.DriveType;
+        List<TechRequirement>? techReqs = unit.RequiresTechnology;
+
+        var validDriveTypes = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            { "Inter", "Stellar", "Warp" };
+
+        // Basic check - should have been caught by ValidateUnitBasicProperties, but check again
+        if (!validDriveTypes.Contains(driveType))
+        {
+            Console.WriteLine($"FAILED: Drive/Tech - Unknown DriveType '{driveType}' (Should not happen if BasicProperties passed)");
+            return false;
+        }
+
+        if (driveType.Equals("Stellar", StringComparison.OrdinalIgnoreCase))
+        {
+            bool requiresStellar = techReqs?.Any(req =>
+                req.TechId.Equals("Stellar Drive", StringComparison.OrdinalIgnoreCase)) ?? false;
+            if (!requiresStellar) { Console.WriteLine($"FAILED: Drive/Tech - Stellar drive unit {unit.Id} missing 'Stellar Drive' tech req"); return false; }
+            Console.WriteLine($" ---> Drive/Tech - Stellar drive requires Stellar Drive tech: PASSED");
+        }
+        else if (driveType.Equals("Warp", StringComparison.OrdinalIgnoreCase))
+        {
+            bool requiresWarp = techReqs?.Any(req =>
+                req.TechId.Equals("Warp Drive", StringComparison.OrdinalIgnoreCase)) ?? false;
+            if (!requiresWarp) { Console.WriteLine($"FAILED: Drive/Tech - Warp drive unit {unit.Id} missing 'Warp Drive' tech req"); return false; }
+            Console.WriteLine($" ---> Drive/Tech - Warp drive requires Warp Drive tech: PASSED");
+        }
+        else // Inter
+        {
+            Console.WriteLine($" ---> Drive/Tech - Inter drive, no specific tech check needed: PASSED");
+        }
+
+        // Note: WeaponType check moved back to ValidateUnitBasicProperties
+
+        Console.WriteLine($" ---> ValidateDriveTypeTechRequirements END: Unit {unit.Id} PASSED");
+        return true;
+    }
+
+    // --- Existing IsValidStructure and IsValidTechnology methods ---
+    // (These should remain as they were provided by you previously)
     private bool IsValidStructure(StructureDefinition? structure)
     {
         if (structure == null) return false;
@@ -90,116 +212,6 @@ public class JsonDefinitionLoader : IDefinitionLoader
         return true;
     }
 
-    // --- CORRECTED REFACTORED IsValidUnit ---
-    private bool IsValidUnit(UnitDefinition? unit)
-    {
-        // Perform checks sequentially. If any validation step fails, return false immediately.
-        return unit != null &&
-               ValidateUnitBasicProperties(unit) &&               // Check required strings, negative numbers etc.
-               ValidateUnitRequiredShipyard(unit.RequiredShipyard) && // Check the shipyard record
-               ValidateUnitRequiresTechnologyList(unit.RequiresTechnology) && // Check the tech list structure/items
-               ValidateDriveTypeTechRequirements(unit);            // Check specific rules linking DriveType and TechReqs
-    }
-
-    // --- CORRECTED HELPER METHODS ---
-
-    private bool ValidateUnitBasicProperties(UnitDefinition unit)
-    {
-        // Basic null/whitespace checks for required string properties
-        if (string.IsNullOrWhiteSpace(unit.Id)) return false;
-        if (string.IsNullOrWhiteSpace(unit.Name)) return false;
-        // DriveType and WeaponType MUST be present for any valid unit definition
-        if (string.IsNullOrWhiteSpace(unit.DriveType)) return false;
-        if (string.IsNullOrWhiteSpace(unit.WeaponType)) return false;
-
-        // Basic negative value checks
-        if (unit.CreditsCost < 0) return false;
-        if (unit.Attack < 0) return false;
-        if (unit.Armour < 0) return false;
-        if (unit.Shield < 0) return false;
-        if (unit.Hangar < 0) return false;
-        if (unit.Speed < 0) return false;
-
-        return true; // All basic property checks passed
-    }
-
-    private bool ValidateUnitRequiredShipyard(ShipyardRequirement? req)
-    {
-        // Check the ShipyardRequirement itself and its levels
-        if (req == null) return false;
-        if (req.BaseLevel < 0) return false;
-        if (req.OrbitalLevel < 0) return false;
-        return true;
-    }
-
-    private bool ValidateUnitRequiresTechnologyList(List<TechRequirement>? techReqs)
-    {
-        // A null list is considered structurally valid here; specific checks happen later if needed by drive type.
-        if (techReqs == null) return true;
-
-        // Check individual requirements in the list
-        foreach (var requirement in techReqs)
-        {
-            // Check for null item, invalid TechId, or invalid Level
-            if (requirement == null || string.IsNullOrWhiteSpace(requirement.TechId) || requirement.Level <= 0)
-            {
-                return false; // Invalid item found
-            }
-        }
-
-        // Check for duplicates using LINQ
-        var hasDuplicates = techReqs
-                            .GroupBy(r => r.TechId, StringComparer.OrdinalIgnoreCase)
-                            .Any(g => g.Count() > 1);
-        if (hasDuplicates)
-        {
-            return false; // Duplicates found
-        }
-
-        return true; // List structure and items are valid
-    }
-
-    // Renamed helper focuses ONLY on the rules linking drive type and tech reqs
-    private bool ValidateDriveTypeTechRequirements(UnitDefinition unit)
-    {
-        // Assume DriveType string itself is already validated by ValidateUnitBasicProperties
-        string driveType = unit.DriveType; // Should not be null/whitespace here
-        List<TechRequirement>? techReqs = unit.RequiresTechnology;
-
-        // Define valid drive types AGAIN here just for the specific checks below
-        // NOTE: We could potentially pass the validated DriveType enum/value in, 
-        // but this keeps helpers more self-contained for now.
-        var validDriveTypes = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-            { "Inter", "Stellar", "Warp" };
-
-        // Belt-and-suspenders check, though ValidateUnitBasicProperties should have caught this
-        if (!validDriveTypes.Contains(driveType))
-        {
-            // This case *shouldn't* be hit if ValidateUnitBasicProperties ran first,
-            // but including for safety during refactoring.
-            // Consider logging a warning if this state is reached.
-            return false;
-        }
-
-        // Check specific tech requirements based on drive type
-        if (driveType.Equals("Stellar", StringComparison.OrdinalIgnoreCase))
-        {
-            bool requiresStellar = techReqs?.Any(req =>
-                req.TechId.Equals("Stellar Drive", StringComparison.OrdinalIgnoreCase)) ?? false;
-            if (!requiresStellar) return false; // Missing required tech
-        }
-        else if (driveType.Equals("Warp", StringComparison.OrdinalIgnoreCase))
-        {
-            bool requiresWarp = techReqs?.Any(req =>
-                req.TechId.Equals("Warp Drive", StringComparison.OrdinalIgnoreCase)) ?? false;
-            if (!requiresWarp) return false; // Missing required tech
-        }
-        // No specific drive tech needed for "Inter" drive type
-
-        return true; // Specific drive/tech rules passed (or didn't apply)
-    }
-
-    // Current IsValidTechnology method
     private bool IsValidTechnology(TechnologyDefinition? tech)
     {
         if (tech == null) return false;
@@ -210,7 +222,6 @@ public class JsonDefinitionLoader : IDefinitionLoader
 
         if (tech.RequiresPrerequisites != null)
         {
-            // Check individual prerequisites first
             foreach (var requirement in tech.RequiresPrerequisites)
             {
                 if (requirement == null) return false;
@@ -218,56 +229,15 @@ public class JsonDefinitionLoader : IDefinitionLoader
                 if (requirement.Level <= 0) return false;
             }
 
-            // ---> ADD THIS CHECK for Duplicate Prerequisite TechIDs <---
-            // Check if there are any TechIds that appear more than once in the list
             var hasDuplicates = tech.RequiresPrerequisites
-                                    .GroupBy(r => r.TechId) // Group by TechId
-                                    .Any(g => g.Count() > 1); // Check if any group has more than one item
-
+                                    .GroupBy(r => r.TechId)
+                                    .Any(g => g.Count() > 1);
             if (hasDuplicates)
             {
-                Console.WriteLine($"Warning: Skipping tech ID '{tech.Id}' due to duplicate prerequisite TechIds."); // Optional warning
-                return false; // Found duplicates
+                Console.WriteLine($"Warning: Skipping tech ID '{tech.Id}' due to duplicate prerequisite TechIds.");
+                return false;
             }
-            // ---> END ADDED CHECK <---
         }
-
-        return true; // Passes all checks
-    }
-
-    // Implement IsValidUnit, IsValidDefense later..
-    public IEnumerable<StructureDefinition> LoadStructures(string jsonContent)
-    {
-        if (string.IsNullOrWhiteSpace(jsonContent))
-        {
-            return Enumerable.Empty<StructureDefinition>(); // Prefer Enumerable.Empty for empty lists
-        }
-
-        try
-        {
-            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-            var initialList = JsonSerializer.Deserialize<List<StructureDefinition>>(jsonContent, options);
-
-            if (initialList == null)
-            {
-                Console.WriteLine("DEBUG: Deserialization resulted in null initialList.");
-                return Enumerable.Empty<StructureDefinition>();
-            }
-
-            var validList = initialList
-                        .Where(IsValidStructure) // Use the helper method
-                        .ToList();
-
-            // Optional logging...
-            if (validList.Count < initialList.Count) { /* ... logging ... */ }
-
-
-            return validList;
-        }
-        catch (JsonException ex)
-        {
-            // ... exception handling ...
-            throw;
-        }
+        return true;
     }
 }
