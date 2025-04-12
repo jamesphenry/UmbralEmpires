@@ -10,6 +10,13 @@ public class BaseModDefinitionsBuilder
     private readonly List<StructureDefinition> _structures = new();
     private readonly List<TechnologyDefinition> _technologies = new();
     private readonly List<UnitDefinition> _units = new();
+    private readonly List<DefenseDefinition> _defenses = new();
+
+    public BaseModDefinitionsBuilder WithDefense(UnitDefinition unit)
+    {
+        _units.Add(unit);
+        return this;
+    }
 
     public BaseModDefinitionsBuilder WithUnit(UnitDefinition unit)
     {
@@ -38,7 +45,8 @@ public class BaseModDefinitionsBuilder
         {
             Structures = _structures,
             Technologies = _technologies,
-            Units = _units
+            Units = _units,
+            Defenses = _defenses
         };
 
         var options = new JsonSerializerOptions { WriteIndented = true };

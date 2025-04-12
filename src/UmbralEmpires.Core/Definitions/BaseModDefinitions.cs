@@ -7,4 +7,5 @@ public record BaseModDefinitions
     public List<StructureDefinition> Structures { get; init; } = new();
     public List<TechnologyDefinition> Technologies { get; init; } = new();
     public List<UnitDefinition> Units { get; init; } = new();
+    public List<DefenseDefinition> Defenses { get; init; } = new();
 }
