@@ -63,14 +63,6 @@ jobs:
 
         $outcome = if ($failed -gt 0) { "Failed" } elseif ($passed -eq $total) { "Passed" } else { "Mixed" }
 
-        $detailedReport = "# Test Run Report ($(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') UTC)"
-        $detailedReport += "`n`n## Summary`n"
-        $detailedReport += "* **Overall Outcome:** $outcome`n"
-        $detailedReport += "* Total Tests: $total`n"
-        $detailedReport += "* Passed: $passed`n"
-        $detailedReport += "* Failed: $failed`n"
-        $detailedReport += "* Skipped: $skipped`n"
-
         $results = $trx.TestRun.Results.UnitTestResult
         if ($null -ne $results -and $results.GetType().Name -ne 'Object[]') { $results = @($results) }
 
