@@ -149,6 +149,34 @@ public class TechnologyDefinitionLoadingTests
         // Assert.True(false, "Verify Description field is loaded.");
     }
 
+    [Fact]
+    public void Should_Skip_Technology_With_Invalid_Prerequisite_Level()
+    {
+        // Arrange -----
+        // Invalid tech has a prerequisite with Level 0
+        var invalidPrereqs = new List<TechRequirement> { new("Energy", 0) };
+        var invalidTech = CreateDefaultValidTechnology(id: "InvalidReqTech") with { RequiresPrerequisites = invalidPrereqs };
+
+        var validTech = CreateDefaultValidTechnology(id: "ValidReqTech", cost: 50); // A second, valid tech
+        var expectedTechnologies = new List<TechnologyDefinition> { validTech }; // Only expect the valid one
+
+        // Use the builder to generate JSON with both techs
+        var jsonInput = TestHelpers.CreateBuilder()
+            .WithTechnology(invalidTech)
+            .WithTechnology(validTech)
+            .BuildJson();
+
+        // Act -----
+        BaseModDefinitions result = _loader.LoadAllDefinitions(jsonInput);
+
+        // Assert -----
+        result.Technologies.Should().NotBeNull();
+        result.Technologies.Should().BeEquivalentTo(expectedTechnologies); // Implicitly checks count and content
+
+        // --- TEMPORARY Assert if needed ---
+        // Assert.True(false, "Verify implementation skips techs with invalid prerequisite levels.");
+    }
+
     // --- Add more tests for technologies ---
     // - Loading multiple techs
     // - Skipping techs with missing Id/Name
