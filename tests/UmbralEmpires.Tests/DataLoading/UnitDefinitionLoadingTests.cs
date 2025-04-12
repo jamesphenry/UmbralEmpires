@@ -517,18 +517,20 @@ public class UnitDefinitionLoadingTests
     {
         // Arrange -----
         var expectedDescription = "This is a test unit description.";
-        // Create a valid unit, ensuring Drive/Weapon types are valid, and set the description
+        // Create a valid unit, ensuring Drive/Weapon types AND REQUIRED TECH are valid
+        var requiredTechs = new List<TechRequirement> { new("Stellar Drive", 1) }; // <<< ADD REQUIRED TECH
         var expectedUnit = CreateDefaultValidUnit(id: "DescUnit") with
         {
             DriveType = "Stellar",
             WeaponType = "Laser",
+            RequiresTechnology = requiredTechs, // <<< ASSIGN REQUIRED TECH
             Description = expectedDescription
         };
         var expectedUnits = new List<UnitDefinition> { expectedUnit };
 
         // Use the builder to generate JSON
         var jsonInput = TestHelpers.CreateBuilder()
-            .WithUnit(expectedUnit) // Add the unit with the description
+            .WithUnit(expectedUnit)
             .BuildJson();
 
         // Act -----
@@ -536,8 +538,8 @@ public class UnitDefinitionLoadingTests
 
         // Assert -----
         result.Units.Should().NotBeNull();
-        result.Units.Should().ContainSingle(); // Ensure only one unit was loaded
-        result.Units[0].Description.Should().Be(expectedDescription); // Check the description specifically
+        result.Units.Should().ContainSingle() // Check it contains one item now
+            .Which.Description.Should().Be(expectedDescription); // Check the description
     }
 
     [Fact]
