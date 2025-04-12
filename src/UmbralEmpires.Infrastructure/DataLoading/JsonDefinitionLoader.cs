@@ -109,13 +109,12 @@ public class JsonDefinitionLoader : IDefinitionLoader
 
         // Check RequiresTechnology list structure first
         bool requiresTechnologyListValid = true;
-        List<TechRequirement>? techReqs = unit.RequiresTechnology; // Cache for slightly cleaner access
+        List<TechRequirement>? techReqs = unit.RequiresTechnology;
 
         if (techReqs != null)
         {
             foreach (var requirement in techReqs)
             {
-                // Check for null item, invalid TechId, or invalid Level
                 if (requirement == null || string.IsNullOrWhiteSpace(requirement.TechId) || requirement.Level <= 0)
                 {
                     requiresTechnologyListValid = false;
@@ -123,7 +122,6 @@ public class JsonDefinitionLoader : IDefinitionLoader
                 }
             }
 
-            // Only check for duplicates if individual items are structurally valid
             if (requiresTechnologyListValid)
             {
                 var hasDuplicates = techReqs
@@ -135,19 +133,15 @@ public class JsonDefinitionLoader : IDefinitionLoader
                 }
             }
         }
-        // If techReqs list itself was null, requiresTechnologyListValid remains true (list structure is ok)
 
-        // Fail early if the list structure was bad (null items, bad id/level, duplicates)
         if (!requiresTechnologyListValid) return false;
 
         // --- Drive Type and Related Tech Validation ---
-        // Define valid drive types (Corrected: using "Inter")
         var validDriveTypes = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
             { "Inter", "Stellar", "Warp" };
 
-        string? driveType = unit.DriveType; // Cache for slightly cleaner access
+        string? driveType = unit.DriveType;
 
-        // Check if drive type string itself is valid
         if (string.IsNullOrWhiteSpace(driveType) || !validDriveTypes.Contains(driveType))
         {
             return false;
@@ -156,30 +150,33 @@ public class JsonDefinitionLoader : IDefinitionLoader
         // Check specific tech requirements based on drive type
         if (driveType.Equals("Stellar", StringComparison.OrdinalIgnoreCase))
         {
-            // Must require "Stellar Drive" tech
             bool requiresStellar = techReqs?.Any(req =>
                 req.TechId.Equals("Stellar Drive", StringComparison.OrdinalIgnoreCase)) ?? false;
             if (!requiresStellar)
             {
-                // Console.WriteLine($"Warning: Unit '{unit.Id}' has Stellar drive but is missing 'Stellar Drive' tech requirement.");
-                return false; // <<< This is the crucial check for the failing test
+                return false;
             }
         }
+        // ---> MODIFY THIS BLOCK <---
         else if (driveType.Equals("Warp", StringComparison.OrdinalIgnoreCase))
         {
-            // Placeholder for Warp Drive check - we will add this next
-            // bool requiresWarp = techReqs?.Any(req => ...) ?? false;
-            // if (!requiresWarp) return false; 
+            // Must require "Warp Drive" tech
+            bool requiresWarp = techReqs?.Any(req =>
+                req.TechId.Equals("Warp Drive", StringComparison.OrdinalIgnoreCase)) ?? false;
+            if (!requiresWarp)
+            {
+                // Console.WriteLine($"Warning: Unit '{unit.Id}' has Warp drive but is missing 'Warp Drive' tech requirement.");
+                return false; // <<< Implement the check
+            }
         }
-        // No specific *drive* tech needed for "Inter" drive type based on current understanding
+        // ---> END MODIFIED BLOCK <---
+        // No specific drive tech needed for "Inter" drive type based on current understanding
 
         // --- End Drive Type Checks ---
 
-        // Check Weapon Type (IsNullOrWhiteSpace check seems sufficient for now)
         if (string.IsNullOrWhiteSpace(unit.WeaponType)) return false;
 
-        // If all checks passed, the unit is considered valid for loading
-        return true;
+        return true; // All checks passed
     }
 
     // Current IsValidTechnology method
