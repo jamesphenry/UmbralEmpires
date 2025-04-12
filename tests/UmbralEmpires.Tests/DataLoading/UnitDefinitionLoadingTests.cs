@@ -610,5 +610,42 @@ public class UnitDefinitionLoadingTests
         // This assertion should fail until we add the specific drive/tech check to IsValidUnit
         result.Units.Should().BeEquivalentTo(expectedUnits, options => options.WithStrictOrdering());
     }
+
+    [Fact]
+    public void Should_Skip_Warp_Unit_Without_WarpDrive_Tech()
+    {
+        // Arrange -----
+        // Invalid: Warp drive type but missing Warp Drive tech requirement
+        var invalidUnit = CreateDefaultValidUnit(id: "MissingWarpDriveReq") with
+        {
+            DriveType = "Warp",
+            WeaponType = "Laser", // Ensure other fields valid
+            RequiresTechnology = new List<TechRequirement>() // Empty list - missing required tech
+        };
+
+        // Valid: Warp drive type AND has Warp Drive tech requirement
+        var validReqs = new List<TechRequirement> { new("Warp Drive", 1) }; // Assume Warp Drive tech exists
+        var validUnit = CreateDefaultValidUnit(id: "HasWarpDriveReq", name: "Valid Warp") with
+        {
+            DriveType = "Warp",
+            WeaponType = "Laser",
+            RequiresTechnology = validReqs
+        };
+        var expectedUnits = new List<UnitDefinition> { validUnit };
+
+        // Use the builder to generate JSON with both units
+        var jsonInput = TestHelpers.CreateBuilder()
+            .WithUnit(invalidUnit)
+            .WithUnit(validUnit)
+            .BuildJson();
+
+        // Act -----
+        BaseModDefinitions result = _loader.LoadAllDefinitions(jsonInput);
+
+        // Assert -----
+        result.Units.Should().NotBeNull();
+        // This assertion should fail until we add the specific warp drive/tech check to IsValidUnit
+        result.Units.Should().BeEquivalentTo(expectedUnits, options => options.WithStrictOrdering());
+    }
     // Future unit tests...
 }
