@@ -108,7 +108,27 @@ public class TechnologyDefinitionLoadingTests
         // Assert.True(false, "Verify implementation skips techs with negative cost.");
     }
 
+    [Fact]
+    public void Should_Skip_Technology_With_Negative_LabsLevel()
+    {
+        // Arrange -----
+        var invalidTech = CreateDefaultValidTechnology(id: "NegLabsTech", labs: -1); // Set invalid labs level
+        var validTech = CreateDefaultValidTechnology(id: "PosLabsTech", labs: 1);  // Valid labs level
+        var expectedTechnologies = new List<TechnologyDefinition> { validTech }; // Only expect the valid one
 
+        // Use the builder to generate JSON with both techs
+        var jsonInput = TestHelpers.CreateBuilder()
+            .WithTechnology(invalidTech)
+            .WithTechnology(validTech)
+            .BuildJson();
+
+        // Act -----
+        BaseModDefinitions result = _loader.LoadAllDefinitions(jsonInput);
+
+        // Assert -----
+        result.Technologies.Should().NotBeNull();
+        result.Technologies.Should().BeEquivalentTo(expectedTechnologies); // Implicitly checks count and content
+    }
 
     // --- Add more tests for technologies ---
     // - Loading multiple techs
