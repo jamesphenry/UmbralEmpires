@@ -467,7 +467,7 @@ public class UnitDefinitionLoadingTests
               "Armour": 1, 
               "Shield": 0, 
               "Hangar": 0, 
-              "Speed": 1, // Speed is 1 in JSON
+              "Speed": 1, 
               "DriveType": "Stellar", 
               "WeaponType": "Laser", 
               "RequiredShipyard": { "BaseLevel": 1, "OrbitalLevel": 0 },
@@ -481,7 +481,7 @@ public class UnitDefinitionLoadingTests
               "Armour": 1, 
               "Shield": 0, 
               "Hangar": 0, 
-              "Speed": 1, // Speed is 1 in JSON
+              "Speed": 1, 
               "DriveType": "Stellar", 
               "WeaponType": "Laser",
               "RequiredShipyard": { "BaseLevel": 1, "OrbitalLevel": 0 },
