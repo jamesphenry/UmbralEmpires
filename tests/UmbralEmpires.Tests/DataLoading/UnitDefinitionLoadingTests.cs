@@ -394,5 +394,30 @@ public class UnitDefinitionLoadingTests
         result.Units.Should().BeEquivalentTo(expectedUnits, options => options.WithStrictOrdering());
     }
 
+    [Fact]
+    public void Should_Skip_Unit_With_Missing_DriveType()
+    {
+        // Arrange -----
+        // Create an invalid unit with an empty DriveType
+        var invalidUnit = CreateDefaultValidUnit(id: "InvalidDriveUnit") with { DriveType = "" };
+        // Create a valid unit
+        var validUnit = CreateDefaultValidUnit(id: "ValidDriveUnit", name: "Valid Drive") with { DriveType = "Stellar" };
+        var expectedUnits = new List<UnitDefinition> { validUnit };
+
+        // Use the builder to generate JSON with both units
+        var jsonInput = TestHelpers.CreateBuilder()
+            .WithUnit(invalidUnit)
+            .WithUnit(validUnit)
+            .BuildJson();
+
+        // Act -----
+        BaseModDefinitions result = _loader.LoadAllDefinitions(jsonInput);
+
+        // Assert -----
+        result.Units.Should().NotBeNull();
+        // This assertion should fail until we add the check to IsValidUnit
+        result.Units.Should().BeEquivalentTo(expectedUnits, options => options.WithStrictOrdering());
+    }
+
     // Future unit tests...
 }

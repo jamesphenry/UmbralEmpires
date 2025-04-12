@@ -110,7 +110,6 @@ public class JsonDefinitionLoader : IDefinitionLoader
         // Check RequiresTechnology list
         if (unit.RequiresTechnology != null)
         {
-            // Check individual requirements first
             foreach (var requirement in unit.RequiresTechnology)
             {
                 if (requirement == null) return false;
@@ -118,20 +117,18 @@ public class JsonDefinitionLoader : IDefinitionLoader
                 if (requirement.Level <= 0) return false;
             }
 
-            // ---> ADD THIS CHECK for Duplicate TechIDs <---
-            // Check if there are any TechIds that appear more than once
             var hasDuplicates = unit.RequiresTechnology
-                                    .GroupBy(r => r.TechId) // Group by TechId
-                                    .Any(g => g.Count() > 1); // Check if any group has > 1 item
-
+                                    .GroupBy(r => r.TechId)
+                                    .Any(g => g.Count() > 1);
             if (hasDuplicates)
             {
-                // Optional: Add a warning log here if desired
-                // Console.WriteLine($"Warning: Skipping unit ID '{unit.Id}' due to duplicate required technology TechIds.");
-                return false; // Found duplicates
+                return false;
             }
-            // ---> END ADDED CHECK <---
         }
+
+        // ---> ADD THIS CHECK <---
+        if (string.IsNullOrWhiteSpace(unit.DriveType)) return false;
+        // ---> END ADDED CHECK <---
 
         // Add more checks later based on tests...
         return true;
