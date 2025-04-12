@@ -102,6 +102,11 @@ public class JsonDefinitionLoader : IDefinitionLoader
         if (unit.Hangar < 0) return false;
         if (unit.Speed < 0) return false;
 
+        // Check the ShipyardRequirement itself and its BaseLevel
+        if (unit.RequiredShipyard == null) return false; // Should not happen with record init, but good practice
+        if (unit.RequiredShipyard.BaseLevel < 0) return false;
+        // We'll add the OrbitalLevel check in the next TDD cycle
+
         // Add more checks later based on tests...
         return true;
     }
