@@ -1,4 +1,4 @@
-name: .NET Build, Test, and Update Detailed README Report
+name: Ctrl+T for Truth
 
 on:
   push:
@@ -86,15 +86,29 @@ jobs:
             $nsParts = $groupName -split '\.'
             $className = $nsParts[-1]
             $filename = "$className.cs"
+
             $githubRepoUrl = "https://github.com/${{ github.repository }}"
             $fileMatch = Get-ChildItem -Recurse -File -Filter $filename | Select-Object -First 1
-            $fileUrl = if ($fileMatch) { "$githubRepoUrl/blob/main/$($fileMatch.FullName -replace '\\','/' -replace '^.*?/', '')" } else { "#" }
+            $fileUrl = if ($fileMatch) {
+              "$githubRepoUrl/blob/main/$($fileMatch.FullName -replace '\\','/' -replace '^.*?/', '')"
+            } else {
+              "#"
+            }
+
+            $testGroup = $group.Group
+            $count = $testGroup.Count
+            $countPassed = ($testGroup | Where-Object { $_.outcome -eq "Passed" }).Count
+            $countFailed = ($testGroup | Where-Object { $_.outcome -eq "Failed" }).Count
+            $countSkipped = ($testGroup | Where-Object { $_.outcome -eq "NotExecuted" }).Count
 
             $detailedReport += "`n### [$groupName]($fileUrl)`n"
-            $detailedReport += "| Test Name | Outcome | Duration (ms) | Error Message |`n"
-            $detailedReport += "|-----------|---------|---------------|---------------|`n"
+            $detailedReport += "**Total: $count | ✅ Passed: $countPassed | ❌ Failed: $countFailed | ⏭ Skipped: $countSkipped**`n"
+            $detailedReport += "<details><summary>Click to expand test details</summary>`n`n"
 
-            foreach ($result in $group.Group) {
+            $detailedReport += "| Test Name | Outcome | Duration (ms) | Error Message |`n"
+            $detailedReport += "|-----------|---------|---------------|----------------|`n"
+
+            foreach ($result in $testGroup) {
               $shortName = ($result.testName -split '\.')[-1]
               $testOutcome = $result.outcome
               $durationMs = 0
@@ -106,27 +120,10 @@ jobs:
                   -replace "`n","<br>" `
                   -replace "`r",""
               }
-
-              # 🔍 Find method line number and build link
-              $testFile = $fileMatch.FullName
-              $methodLine = 0
-              $methodLink = $fileUrl
-              try {
-                $methodMatch = Select-String -Path $testFile -Pattern "^\s*\[Fact.*\]\s*\n*\s*.*\s$shortName\s*\(" -Context 0,2 | Select-Object -First 1
-                if (-not $methodMatch) {
-                  $methodMatch = Select-String -Path $testFile -Pattern "^\s*public\s+.*\s$shortName\s*\(" | Select-Object -First 1
-                }
-                if ($methodMatch) {
-                  $methodLine = $methodMatch.LineNumber
-                  $relativePath = $testFile -replace '\\','/' -replace '^.*?/', ''
-                  $methodLink = "$githubRepoUrl/blob/main/$relativePath#L$methodLine"
-                }
-              } catch {
-                Write-Host "Unable to locate method $shortName in $testFile"
-              }
-
-              $detailedReport += "| [$($shortName -replace '\|','\|')]($methodLink) | $testOutcome | $durationMs | $errorMessage |`n"
+              $detailedReport += "| $($shortName -replace '\|','\|') | $testOutcome | $durationMs | $errorMessage |`n"
             }
+
+            $detailedReport += "`n</details>`n"
           }
         } else {
           $detailedReport += "`n(No test results found)`n"
