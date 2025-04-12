@@ -130,6 +130,25 @@ public class TechnologyDefinitionLoadingTests
         result.Technologies.Should().BeEquivalentTo(expectedTechnologies); // Implicitly checks count and content
     }
 
+    [Fact]
+    public void Should_Load_Technology_Description()
+    {
+        // Arrange -----
+        var expectedDescription = "Test description for loading.";
+        // Use the helper to create a base valid tech, then use 'with' to set the description
+        var expected = CreateDefaultValidTechnology(id: "DescTest") with { Description = expectedDescription };
+
+        // Act & Assert using static helper
+        TestHelpers.TestSingleDefinitionProperty<TechnologyDefinition>(
+            _loader, TestHelpers.CreateBuilder(), expected,
+            b => b.WithTechnology(expected), // Builder adds the tech with the description
+            r => r.Technologies             // Select Technologies list
+        );
+
+        // --- TEMPORARY Assert if needed ---
+        // Assert.True(false, "Verify Description field is loaded.");
+    }
+
     // --- Add more tests for technologies ---
     // - Loading multiple techs
     // - Skipping techs with missing Id/Name
