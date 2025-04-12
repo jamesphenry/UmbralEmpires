@@ -1,7 +1,6 @@
-﻿// tests/UmbralEmpires.Tests/DataLoading/TechnologyDefinitionLoadingTests.cs (New File)
+﻿// tests/UmbralEmpires.Tests/DataLoading/TechnologyDefinitionLoadingTests.cs
 using Xunit;
 using FluentAssertions;
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using UmbralEmpires.Core.Definitions;
@@ -16,19 +15,26 @@ public class TechnologyDefinitionLoadingTests
 {
     private readonly IDefinitionLoader _loader = new JsonDefinitionLoader();
 
-    // Helper to create a default valid technology
-    private TechnologyDefinition CreateDefaultValidTechnology(string id = "ValidTech", string name = "Valid Tech Name", int cost = 1, int labs = 1)
+    // ---> HELPER METHOD DEFINITION WAS MISSING - ADD THIS <---
+    // Helper to create a default valid technology with required fields populated
+    private TechnologyDefinition CreateDefaultValidTechnology(
+        string id = "ValidTech",
+        string name = "Valid Tech Name",
+        int cost = 1,
+        int labs = 1)
     {
+        // Ensure all properties expected by BeEquivalentTo have reasonable defaults
         return new TechnologyDefinition
         {
             Id = id,
             Name = name,
             CreditsCost = cost,
             RequiredLabsLevel = labs,
-            RequiresPrerequisites = new List<TechRequirement>() // Default empty list
-            // Description defaults to ""
+            RequiresPrerequisites = new List<TechRequirement>(), // Default empty list
+            Description = "" // Default empty string
         };
     }
+    // ---> END HELPER METHOD DEFINITION <---
 
     [Fact]
     public void Should_Load_Single_Simple_Technology()
@@ -36,12 +42,19 @@ public class TechnologyDefinitionLoadingTests
         // Arrange
         var expected = CreateDefaultValidTechnology(id: "Energy", name: "Energy", cost: 2, labs: 1) with { Description = "Increases all bases energy output by 5%." };
 
-        // Act & Assert using helper
-        TestHelpers.TestSingleDefinitionProperty(
+        // Act & Assert using static helper
+        TestHelpers.TestSingleDefinitionProperty<TechnologyDefinition>(
             _loader, TestHelpers.CreateBuilder(), expected,
-            b => b.WithTechnology(expected), // Use WithTechnology
-            r => r.Technologies // Select Technologies list
+            b => b.WithTechnology(expected),
+            r => r.Technologies
         );
+
+        // Additionally verify other lists are empty
+        var builder = TestHelpers.CreateBuilder().WithTechnology(expected);
+        var jsonInput = builder.BuildJson();
+        BaseModDefinitions result = _loader.LoadAllDefinitions(jsonInput);
+        result.Structures.Should().BeEmpty();
+        result.Units.Should().BeEmpty(); // Assuming Units list exists in BaseModDefinitions now
     }
 
     [Fact]
@@ -55,8 +68,8 @@ public class TechnologyDefinitionLoadingTests
             Description = "Increases laser weapons power by 5%."
         };
 
-        // Act & Assert using helper
-        TestHelpers.TestSingleDefinitionProperty(
+        // Act & Assert using static helper
+        TestHelpers.TestSingleDefinitionProperty<TechnologyDefinition>(
             _loader, TestHelpers.CreateBuilder(), expected,
             b => b.WithTechnology(expected),
             r => r.Technologies
@@ -64,194 +77,114 @@ public class TechnologyDefinitionLoadingTests
     }
 
     [Fact]
-    public void LoadAllDefinitions_Should_Load_Single_Simple_Technology()
-    {
-        // Arrange
-        var expected = CreateDefaultValidTechnology(id: "Energy", name: "Energy", cost: 2, labs: 1) with { Description = "Increases all bases energy output by 5%." };
-
-        // Act & Assert using static helper
-        TestHelpers.TestSingleDefinitionProperty<TechnologyDefinition>(
-            _loader, TestHelpers.CreateBuilder(), expected,
-            b => b.WithTechnology(expected), // Use WithTechnology
-            r => r.Technologies             // Select Technologies list
-        );
-
-        // Additionally verify Structures list is empty
-        var builder = TestHelpers.CreateBuilder().WithTechnology(expected);
-        var jsonInput = builder.BuildJson();
-        BaseModDefinitions result = _loader.LoadAllDefinitions(jsonInput);
-        result.Structures.Should().BeEmpty();
-    }
-
-    [Fact]
     public void Should_Skip_Technology_With_Negative_Cost()
     {
-        // Arrange -----
+        // Arrange
         var invalidTech = CreateDefaultValidTechnology(id: "NegCostTech", cost: -100);
         var validTech = CreateDefaultValidTechnology(id: "PosCostTech", cost: 100);
-        var expectedTechnologies = new List<TechnologyDefinition> { validTech }; // Only expect the valid one
-
-        // Use the builder to generate JSON with both techs
-        var jsonInput = TestHelpers.CreateBuilder()
-            .WithTechnology(invalidTech)
-            .WithTechnology(validTech)
-            .BuildJson();
-
-        // Act -----
+        var expectedTechnologies = new List<TechnologyDefinition> { validTech };
+        var jsonInput = TestHelpers.CreateBuilder().WithTechnology(invalidTech).WithTechnology(validTech).BuildJson();
+        // Act
         BaseModDefinitions result = _loader.LoadAllDefinitions(jsonInput);
-
-        // Assert -----
-        result.Technologies.Should().NotBeNull();
-        result.Technologies.Should().BeEquivalentTo(expectedTechnologies); // Implicitly checks count and content
-
-        // --- TEMPORARY Assert if needed ---
-        // Assert.True(false, "Verify implementation skips techs with negative cost.");
+        // Assert
+        result.Technologies.Should().BeEquivalentTo(expectedTechnologies);
     }
 
     [Fact]
     public void Should_Skip_Technology_With_Negative_LabsLevel()
     {
-        // Arrange -----
-        var invalidTech = CreateDefaultValidTechnology(id: "NegLabsTech", labs: -1); // Set invalid labs level
-        var validTech = CreateDefaultValidTechnology(id: "PosLabsTech", labs: 1);  // Valid labs level
-        var expectedTechnologies = new List<TechnologyDefinition> { validTech }; // Only expect the valid one
-
-        // Use the builder to generate JSON with both techs
-        var jsonInput = TestHelpers.CreateBuilder()
-            .WithTechnology(invalidTech)
-            .WithTechnology(validTech)
-            .BuildJson();
-
-        // Act -----
+        // Arrange
+        var invalidTech = CreateDefaultValidTechnology(id: "NegLabsTech", labs: -1);
+        var validTech = CreateDefaultValidTechnology(id: "PosLabsTech", labs: 1);
+        var expectedTechnologies = new List<TechnologyDefinition> { validTech };
+        var jsonInput = TestHelpers.CreateBuilder().WithTechnology(invalidTech).WithTechnology(validTech).BuildJson();
+        // Act
         BaseModDefinitions result = _loader.LoadAllDefinitions(jsonInput);
-
-        // Assert -----
-        result.Technologies.Should().NotBeNull();
-        result.Technologies.Should().BeEquivalentTo(expectedTechnologies); // Implicitly checks count and content
+        // Assert
+        result.Technologies.Should().BeEquivalentTo(expectedTechnologies);
     }
 
     [Fact]
     public void Should_Load_Technology_Description()
     {
-        // Arrange -----
-        var expectedDescription = "Test description for loading.";
-        // Use the helper to create a base valid tech, then use 'with' to set the description
+        // Arrange
+        var expectedDescription = "This is the test description.";
         var expected = CreateDefaultValidTechnology(id: "DescTest") with { Description = expectedDescription };
-
         // Act & Assert using static helper
         TestHelpers.TestSingleDefinitionProperty<TechnologyDefinition>(
             _loader, TestHelpers.CreateBuilder(), expected,
-            b => b.WithTechnology(expected), // Builder adds the tech with the description
-            r => r.Technologies             // Select Technologies list
+            b => b.WithTechnology(expected),
+            r => r.Technologies
         );
+    }
 
-        // --- TEMPORARY Assert if needed ---
-        // Assert.True(false, "Verify Description field is loaded.");
+    [Fact]
+    public void Should_Skip_Technology_With_Invalid_Prerequisite_TechId()
+    {
+        // Arrange
+        var invalidPrereqs = new List<TechRequirement> { new("", 5) }; // Invalid TechId
+        var invalidTech = CreateDefaultValidTechnology(id: "InvalidReqTechId") with { RequiresPrerequisites = invalidPrereqs };
+        var validTech = CreateDefaultValidTechnology(id: "ValidReqTechId", cost: 50);
+        var expectedTechnologies = new List<TechnologyDefinition> { validTech };
+        var jsonInput = TestHelpers.CreateBuilder().WithTechnology(invalidTech).WithTechnology(validTech).BuildJson();
+        // Act
+        BaseModDefinitions result = _loader.LoadAllDefinitions(jsonInput);
+        // Assert
+        result.Technologies.Should().BeEquivalentTo(expectedTechnologies);
     }
 
     [Fact]
     public void Should_Skip_Technology_With_Invalid_Prerequisite_Level()
     {
-        // Arrange -----
-        // Invalid tech has a prerequisite with Level 0
-        var invalidPrereqs = new List<TechRequirement> { new("Energy", 0) };
-        var invalidTech = CreateDefaultValidTechnology(id: "InvalidReqTech") with { RequiresPrerequisites = invalidPrereqs };
-
-        var validTech = CreateDefaultValidTechnology(id: "ValidReqTech", cost: 50); // A second, valid tech
-        var expectedTechnologies = new List<TechnologyDefinition> { validTech }; // Only expect the valid one
-
-        // Use the builder to generate JSON with both techs
-        var jsonInput = TestHelpers.CreateBuilder()
-            .WithTechnology(invalidTech)
-            .WithTechnology(validTech)
-            .BuildJson();
-
-        // Act -----
+        // Arrange
+        var invalidPrereqs = new List<TechRequirement> { new("Energy", 0) }; // Invalid Level
+        var invalidTech = CreateDefaultValidTechnology(id: "InvalidReqLvlTech") with { RequiresPrerequisites = invalidPrereqs };
+        var validTech = CreateDefaultValidTechnology(id: "ValidReqLvlTech", cost: 50);
+        var expectedTechnologies = new List<TechnologyDefinition> { validTech };
+        var jsonInput = TestHelpers.CreateBuilder().WithTechnology(invalidTech).WithTechnology(validTech).BuildJson();
+        // Act
         BaseModDefinitions result = _loader.LoadAllDefinitions(jsonInput);
-
-        // Assert -----
-        result.Technologies.Should().NotBeNull();
-        result.Technologies.Should().BeEquivalentTo(expectedTechnologies); // Implicitly checks count and content
-
-        // --- TEMPORARY Assert if needed ---
-        // Assert.True(false, "Verify implementation skips techs with invalid prerequisite levels.");
+        // Assert
+        result.Technologies.Should().BeEquivalentTo(expectedTechnologies);
     }
 
     [Fact]
-    public void Should_Skip_Technology_With_Null_Entry_In_Prerequisites_List()
+    public void Should_Skip_Technology_With_Null_Entry_In_Prerequisites_List() // Requires manual JSON
     {
-        // Arrange -----
-        // Need to craft JSON manually for this case, as builder likely won't add nulls
+        // Arrange
         var jsonInput = """
         {
           "Structures": [],
           "Technologies": [
-            {
-              "Id": "TechWithNullReq",
-              "Name": "Tech With Null Req",
-              "CreditsCost": 10,
-              "RequiredLabsLevel": 1,
-              "RequiresPrerequisites": [ null ]
-            },
-            {
-              "Id": "ValidTechAlongsideNull",
-              "Name": "Valid Tech Alongside Null",
-              "CreditsCost": 20,
-              "RequiredLabsLevel": 1,
-              "RequiresPrerequisites": []
-            }
+            { "Id": "TechWithNullReq", "Name": "T", "CreditsCost": 10, "RequiredLabsLevel": 1, "RequiresPrerequisites": [ null ] },
+            { "Id": "ValidTechAlongsideNull", "Name": "V", "CreditsCost": 20, "RequiredLabsLevel": 1, "RequiresPrerequisites": [] }
           ]
         }
         """;
+        var validTech = CreateDefaultValidTechnology(id: "ValidTechAlongsideNull", name: "V", cost: 20, labs: 1); // Match valid tech
+        var expectedTechnologies = new List<TechnologyDefinition> { validTech };
 
-        var validTech = CreateDefaultValidTechnology(id: "ValidTechAlongsideNull", name: "Valid Tech Alongside Null", cost: 20, labs: 1);
-        var expectedTechnologies = new List<TechnologyDefinition> { validTech }; // Only expect the valid one
-
-        // Act -----
+        // Act
         BaseModDefinitions result = _loader.LoadAllDefinitions(jsonInput);
 
-        // Assert -----
-        result.Technologies.Should().NotBeNull();
-        result.Technologies.Should().BeEquivalentTo(expectedTechnologies); // Implicitly checks count and content
-
-        // --- TEMPORARY Assert if needed ---
-        // Assert.True(false, "Verify implementation skips techs with null prerequisite entries.");
+        // Assert
+        result.Technologies.Should().BeEquivalentTo(expectedTechnologies);
     }
 
     [Fact]
     public void Should_Skip_Technology_With_Duplicate_Prerequisite_TechIds()
     {
-        // Arrange -----
-        // Invalid tech requires Energy twice (different levels, but same ID)
-        var invalidPrereqs = new List<TechRequirement> { new("Energy", 1), new("Energy", 2) };
+        // Arrange
+        var invalidPrereqs = new List<TechRequirement> { new("Energy", 1), new("Energy", 2) }; // Duplicate Energy
         var invalidTech = CreateDefaultValidTechnology(id: "DupReqTech") with { RequiresPrerequisites = invalidPrereqs };
-
-        var validTech = CreateDefaultValidTechnology(id: "ValidTechAgain", cost: 50); // A second, valid tech
-        var expectedTechnologies = new List<TechnologyDefinition> { validTech }; // Only expect the valid one
-
-        // Use the builder to generate JSON with both techs
-        var jsonInput = TestHelpers.CreateBuilder()
-            .WithTechnology(invalidTech)
-            .WithTechnology(validTech)
-            .BuildJson();
-
-        // Act -----
+        var validTech = CreateDefaultValidTechnology(id: "ValidTechAgain", cost: 50);
+        var expectedTechnologies = new List<TechnologyDefinition> { validTech };
+        var jsonInput = TestHelpers.CreateBuilder().WithTechnology(invalidTech).WithTechnology(validTech).BuildJson();
+        // Act
         BaseModDefinitions result = _loader.LoadAllDefinitions(jsonInput);
-
-        // Assert -----
-        result.Technologies.Should().NotBeNull();
-        result.Technologies.Should().BeEquivalentTo(expectedTechnologies); // Implicitly checks count and content
-
-        // --- TEMPORARY Assert if needed ---
-        // Assert.True(false, "Verify implementation skips techs with duplicate prerequisite TechIds.");
+        // Assert
+        result.Technologies.Should().BeEquivalentTo(expectedTechnologies);
     }
 
-
-    // --- Add more tests for technologies ---
-    // - Loading multiple techs
-    // - Skipping techs with missing Id/Name
-    // - Skipping techs with negative cost/labs level
-    // - Loading all properties
-    // etc...
-
+    // Future technology tests... Maybe validation that Prereq TechID exists?
 }

@@ -83,5 +83,29 @@ public class UnitDefinitionLoadingTests
         // Assert.True(false, "Verify implementation skips units with negative cost.");
     }
 
+    [Fact]
+    public void Should_Skip_Unit_With_Missing_Id()
+    {
+        // Arrange -----
+        // Create an invalid unit with an empty Id
+        var invalidUnit = CreateDefaultValidUnit() with { Id = "" }; // Explicitly empty Id
+        // Create a valid unit to ensure it's still loaded
+        var validUnit = CreateDefaultValidUnit(id: "ValidUnitId", name: "Valid Unit");
+        var expectedUnits = new List<UnitDefinition> { validUnit }; // Only expect the valid one
+
+        // Use the builder to generate JSON with both units
+        var jsonInput = TestHelpers.CreateBuilder()
+            .WithUnit(invalidUnit) // Add the invalid one
+            .WithUnit(validUnit)   // Add the valid one
+            .BuildJson();
+
+        // Act -----
+        BaseModDefinitions result = _loader.LoadAllDefinitions(jsonInput);
+
+        // Assert -----
+        result.Units.Should().NotBeNull();
+        result.Units.Should().BeEquivalentTo(expectedUnits, options => options.WithStrictOrdering()); // Ensure only the valid one is present
+    }
+
     // Future unit tests...
 }
