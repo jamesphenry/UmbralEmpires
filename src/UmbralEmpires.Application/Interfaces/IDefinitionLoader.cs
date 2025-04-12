@@ -6,6 +6,6 @@ namespace UmbralEmpires.Application.Interfaces; // Or appropriate namespace
 
 public interface IDefinitionLoader
 {
-    // Minimal interface for the first test
-    IEnumerable<StructureDefinition> LoadStructures(string jsonContent);
+    // Loads all definitions from the main JSON content
+    BaseModDefinitions LoadAllDefinitions(string jsonContent);
 }

@@ -10,6 +10,88 @@ namespace UmbralEmpires.Infrastructure.DataLoading;
 
 public class JsonDefinitionLoader : IDefinitionLoader
 {
+    // --- NEW METHOD ---
+    public BaseModDefinitions LoadAllDefinitions(string jsonContent)
+    {
+        if (string.IsNullOrWhiteSpace(jsonContent))
+        {
+            Console.WriteLine("Warning: Definition content is empty, returning empty definitions.");
+            return new BaseModDefinitions(); // Return empty container
+        }
+
+        try
+        {
+            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            // Deserialize the entire structure
+            var loadedData = JsonSerializer.Deserialize<BaseModDefinitions>(jsonContent, options);
+
+            if (loadedData == null)
+            {
+                Console.WriteLine("Warning: Deserialization resulted in null BaseModDefinitions object.");
+                return new BaseModDefinitions(); // Return empty container
+            }
+
+            // --- Apply Validation/Filtering ---
+            // Filter Structures (using existing helper method)
+            var initialStructureCount = loadedData.Structures?.Count ?? 0;
+            var validStructures = loadedData.Structures?
+                                      .Where(IsValidStructure) // Apply validation
+                                      .ToList() ?? new List<StructureDefinition>();
+            if (validStructures.Count < initialStructureCount)
+                Console.WriteLine($"Warning: Skipped {initialStructureCount - validStructures.Count} structure(s) due to validation errors.");
+
+            // Filter Technologies (using new helper method - create below)
+            var initialTechCount = loadedData.Technologies?.Count ?? 0;
+            var validTechnologies = loadedData.Technologies?
+                                      .Where(IsValidTechnology) // Apply validation
+                                      .ToList() ?? new List<TechnologyDefinition>();
+            if (validTechnologies.Count < initialTechCount)
+                Console.WriteLine($"Warning: Skipped {initialTechCount - validTechnologies.Count} technology(s) due to validation errors.");
+
+            // Filter Units... (when UnitDefinition exists)
+            // Filter Defenses... (when DefenseDefinition exists)
+
+
+            // Return a NEW object containing only the validated lists
+            return loadedData with // Using record "with" expression
+            {
+                Structures = validStructures,
+                Technologies = validTechnologies
+                // Assign validated lists for Units, Defenses etc. here later
+            };
+        }
+        catch (JsonException ex)
+        {
+            Console.WriteLine($"Error deserializing base definitions: {ex.Message}");
+            // Re-throw to indicate catastrophic failure loading definitions
+            throw new InvalidOperationException("Failed to load base game definitions due to invalid JSON.", ex);
+        }
+    }
+
+    // Existing helper for structures
+    private bool IsValidStructure(StructureDefinition? structure)
+    {
+        if (structure == null) return false;
+        if (string.IsNullOrWhiteSpace(structure.Id)) return false;
+        if (structure.BaseCreditsCost < 0) return false;
+        if (string.IsNullOrWhiteSpace(structure.Name)) return false;
+        // Add more checks here...
+        return true;
+    }
+
+    // --- NEW HELPER METHOD (Placeholder) ---
+    private bool IsValidTechnology(TechnologyDefinition? tech)
+    {
+        if (tech == null) return false;
+        if (string.IsNullOrWhiteSpace(tech.Id)) return false;
+        if (string.IsNullOrWhiteSpace(tech.Name)) return false;
+        if (tech.CreditsCost < 0) return false; // Costs should be non-negative
+        if (tech.RequiredLabsLevel < 0) return false; // Level should be non-negative
+                                                      // Add more checks (e.g., validate prerequisite IDs exist?) later
+        return true;
+    }
+
+    // Implement IsValidUnit, IsValidDefense later..
     public IEnumerable<StructureDefinition> LoadStructures(string jsonContent)
     {
         if (string.IsNullOrWhiteSpace(jsonContent))
@@ -44,18 +126,4 @@ public class JsonDefinitionLoader : IDefinitionLoader
             throw;
         }
     }
-
-    private bool IsValidStructure(StructureDefinition? structure)
-    {
-        if (structure == null) return false;
-        if (string.IsNullOrWhiteSpace(structure.Id)) return false;
-        if (structure.BaseCreditsCost < 0)
-        {
-            Console.WriteLine($"Warning: Skipping structure ID '{structure.Id}' due to negative BaseCreditsCost ({structure.BaseCreditsCost})."); // Optional warning
-            return false;
-        }
-        return true;
-    }
-
-
 }
