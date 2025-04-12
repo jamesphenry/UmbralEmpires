@@ -126,8 +126,9 @@ public class JsonDefinitionLoader : IDefinitionLoader
             }
         }
 
-        // ---> ADD THIS CHECK <---
         if (string.IsNullOrWhiteSpace(unit.DriveType)) return false;
+        // ---> ADD THIS CHECK <---
+        if (string.IsNullOrWhiteSpace(unit.WeaponType)) return false;
         // ---> END ADDED CHECK <---
 
         // Add more checks later based on tests...
