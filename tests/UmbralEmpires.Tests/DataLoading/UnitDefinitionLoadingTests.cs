@@ -450,5 +450,67 @@ public class UnitDefinitionLoadingTests
         result.Units.Should().BeEquivalentTo(expectedUnits, options => options.WithStrictOrdering());
     }
 
+    [Fact]
+    public void Should_Skip_Unit_With_Null_Entry_In_RequiresTechnology() // Requires manual JSON
+    {
+        // Arrange -----
+        // Define JSON manually to include a null in the list
+        var jsonInput = """
+        {
+          "Structures": [],
+          "Technologies": [],
+          "Units": [
+            { 
+              "Id": "UnitWithNullReq", 
+              "Name": "N", 
+              "CreditsCost": 1, 
+              "Attack": 1, 
+              "Armour": 1, 
+              "Shield": 0, 
+              "Hangar": 0, 
+              "Speed": 1,
+              "DriveType": "Stellar", 
+              "WeaponType": "Laser", 
+              "RequiredShipyard": { "BaseLevel": 1, "OrbitalLevel": 0 },
+              "RequiresTechnology": [ null ] 
+            },
+            { 
+              "Id": "ValidUnitAlongsideNull", 
+              "Name": "V", 
+              "CreditsCost": 1, 
+              "Attack": 1, 
+              "Armour": 1, 
+              "Shield": 0, 
+              "Hangar": 0, 
+              "Speed": 1,
+              "DriveType": "Stellar", 
+              "WeaponType": "Laser",
+              "RequiredShipyard": { "BaseLevel": 1, "OrbitalLevel": 0 },
+              "RequiresTechnology": [] 
+            }
+          ]
+        }
+        """;
+
+        // Define the expected valid unit
+        var validUnit = CreateDefaultValidUnit(id: "ValidUnitAlongsideNull", name: "V") with
+        {
+            DriveType = "Stellar",
+            WeaponType = "Laser",
+            Attack = 1,
+            Armour = 1
+            // Other properties will use defaults from CreateDefaultValidUnit or the record itself
+        };
+        var expectedUnits = new List<UnitDefinition> { validUnit };
+
+        // Act -----
+        BaseModDefinitions result = _loader.LoadAllDefinitions(jsonInput);
+
+        // Assert -----
+        result.Units.Should().NotBeNull();
+        // This assertion should PASS because the null check exists in IsValidUnit
+        result.Units.Should().BeEquivalentTo(expectedUnits, options => options.WithStrictOrdering());
+    }
+
     // Future unit tests...
 }
