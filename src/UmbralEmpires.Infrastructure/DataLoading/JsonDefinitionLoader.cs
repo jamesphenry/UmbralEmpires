@@ -93,10 +93,15 @@ public class JsonDefinitionLoader : IDefinitionLoader
     private bool IsValidUnit(UnitDefinition? unit)
     {
         if (unit == null) return false;
-        if (string.IsNullOrWhiteSpace(unit.Id)) return false; // Assuming Id is required
+        if (string.IsNullOrWhiteSpace(unit.Id)) return false;
         if (string.IsNullOrWhiteSpace(unit.Name)) return false;
-        if (unit.CreditsCost < 0) return false; // Basic check
-                                                // Add more checks later based on tests...
+        if (unit.CreditsCost < 0) return false;
+
+        // ---> ADD THIS CHECK <---
+        if (unit.Attack < 0) return false;
+        // ---> END ADDED CHECK <---
+
+        // Add more checks later based on tests...
         return true;
     }
 
