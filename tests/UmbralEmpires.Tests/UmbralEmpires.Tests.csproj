@@ -22,7 +22,6 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\UmbralEmpires.Core\UmbralEmpires.Core.csproj" />
     <ProjectReference Include="..\..\src\UmbralEmpires.Application\UmbralEmpires.Application.csproj" />
-    <ProjectReference Include="..\..\src\UmbralEmpires.Infrastructure\UmbralEmpires.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>
