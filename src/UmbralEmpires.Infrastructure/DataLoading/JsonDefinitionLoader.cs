@@ -100,6 +100,7 @@ public class JsonDefinitionLoader : IDefinitionLoader
         if (unit.Armour < 0) return false;
         if (unit.Shield < 0) return false;
         if (unit.Hangar < 0) return false;
+        if (unit.Speed < 0) return false;
 
         // Add more checks later based on tests...
         return true;
