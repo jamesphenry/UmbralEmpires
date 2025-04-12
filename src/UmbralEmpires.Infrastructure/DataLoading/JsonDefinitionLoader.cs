@@ -48,6 +48,16 @@ public class JsonDefinitionLoader : IDefinitionLoader
             if (validTechnologies.Count < initialTechCount)
                 Console.WriteLine($"Warning: Skipped {initialTechCount - validTechnologies.Count} technology(s) due to validation errors.");
 
+            // ---> ADD Unit Validation <---
+            var initialUnitCount = loadedData.Units?.Count ?? 0;
+            var validUnits = loadedData.Units?
+                                      .Where(IsValidUnit) // Apply validation
+                                      .ToList() ?? new List<UnitDefinition>();
+            if (validUnits.Count < initialUnitCount)
+                Console.WriteLine($"Warning: Skipped {initialUnitCount - validUnits.Count} unit(s) due to validation errors.");
+            // ---> END Unit Validation <---
+
+
             // Filter Units... (when UnitDefinition exists)
             // Filter Defenses... (when DefenseDefinition exists)
 
@@ -56,7 +66,8 @@ public class JsonDefinitionLoader : IDefinitionLoader
             return loadedData with // Using record "with" expression
             {
                 Structures = validStructures,
-                Technologies = validTechnologies
+                Technologies = validTechnologies,
+                Units = validUnits
                 // Assign validated lists for Units, Defenses etc. here later
             };
         }
@@ -76,6 +87,16 @@ public class JsonDefinitionLoader : IDefinitionLoader
         if (structure.BaseCreditsCost < 0) return false;
         if (string.IsNullOrWhiteSpace(structure.Name)) return false;
         // Add more checks here...
+        return true;
+    }
+
+    private bool IsValidUnit(UnitDefinition? unit)
+    {
+        if (unit == null) return false;
+        if (string.IsNullOrWhiteSpace(unit.Id)) return false; // Assuming Id is required
+        if (string.IsNullOrWhiteSpace(unit.Name)) return false;
+        if (unit.CreditsCost < 0) return false; // Basic check
+                                                // Add more checks later based on tests...
         return true;
     }
 
