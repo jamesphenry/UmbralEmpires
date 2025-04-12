@@ -12,9 +12,9 @@ public class BaseModDefinitionsBuilder
     private readonly List<UnitDefinition> _units = new();
     private readonly List<DefenseDefinition> _defenses = new();
 
-    public BaseModDefinitionsBuilder WithDefense(UnitDefinition unit)
+    public BaseModDefinitionsBuilder WithDefense(DefenseDefinition defense)
     {
-        _units.Add(unit);
+        _defenses.Add(defense);
         return this;
     }
 
