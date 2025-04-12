@@ -127,8 +127,10 @@ public class JsonDefinitionLoader : IDefinitionLoader
         }
 
         // ---> MODIFY DriveType Check <---
-        // Define valid drive types
-        var validDriveTypes = new HashSet<string> { "Interceptor", "Stellar", "Warp" };
+        // Define valid drive types (using HashSet for efficiency)
+        var validDriveTypes = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            { "Inter", "Stellar", "Warp" }; // Added OrdinalIgnoreCase for robustness
+
         if (string.IsNullOrWhiteSpace(unit.DriveType) || !validDriveTypes.Contains(unit.DriveType))
         {
             // Optional: Log warning about unknown drive type
