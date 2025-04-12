@@ -573,5 +573,42 @@ public class UnitDefinitionLoadingTests
         // This assertion should fail until we modify IsValidUnit
         result.Units.Should().BeEquivalentTo(expectedUnits, options => options.WithStrictOrdering());
     }
+
+    [Fact]
+    public void Should_Skip_Stellar_Unit_Without_StellarDrive_Tech()
+    {
+        // Arrange -----
+        // Invalid: Stellar drive type but missing Stellar Drive tech requirement
+        var invalidUnit = CreateDefaultValidUnit(id: "MissingStellarDriveReq") with
+        {
+            DriveType = "Stellar",
+            WeaponType = "Laser", // Ensure other fields valid
+            RequiresTechnology = new List<TechRequirement>() // Empty list - missing required tech
+        };
+
+        // Valid: Stellar drive type AND has Stellar Drive tech requirement
+        var validReqs = new List<TechRequirement> { new("Stellar Drive", 1) }; // Assume Stellar Drive tech exists
+        var validUnit = CreateDefaultValidUnit(id: "HasStellarDriveReq", name: "Valid Stellar") with
+        {
+            DriveType = "Stellar",
+            WeaponType = "Laser",
+            RequiresTechnology = validReqs
+        };
+        var expectedUnits = new List<UnitDefinition> { validUnit };
+
+        // Use the builder to generate JSON with both units
+        var jsonInput = TestHelpers.CreateBuilder()
+            .WithUnit(invalidUnit)
+            .WithUnit(validUnit)
+            .BuildJson();
+
+        // Act -----
+        BaseModDefinitions result = _loader.LoadAllDefinitions(jsonInput);
+
+        // Assert -----
+        result.Units.Should().NotBeNull();
+        // This assertion should fail until we add the specific drive/tech check to IsValidUnit
+        result.Units.Should().BeEquivalentTo(expectedUnits, options => options.WithStrictOrdering());
+    }
     // Future unit tests...
 }
