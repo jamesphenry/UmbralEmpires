@@ -424,9 +424,14 @@ public class UnitDefinitionLoadingTests
     {
         // Arrange -----
         // Create an invalid unit with an empty WeaponType
-        var invalidUnit = CreateDefaultValidUnit(id: "InvalidWeaponUnit") with { WeaponType = "" };
-        // Create a valid unit
-        var validUnit = CreateDefaultValidUnit(id: "ValidWeaponUnit", name: "Valid Weapon") with { WeaponType = "Laser" };
+        var invalidUnit = CreateDefaultValidUnit(id: "InvalidWeaponUnit") with { DriveType = "Stellar", WeaponType = "" }; // Also give it a valid DriveType
+
+        // Create a valid unit - ENSURE IT HAS A VALID DriveType TOO!
+        var validUnit = CreateDefaultValidUnit(id: "ValidWeaponUnit", name: "Valid Weapon") with
+        {
+            DriveType = "Stellar", // <<< ADD THIS VALID DriveType
+            WeaponType = "Laser"
+        };
         var expectedUnits = new List<UnitDefinition> { validUnit };
 
         // Use the builder to generate JSON with both units
@@ -440,7 +445,8 @@ public class UnitDefinitionLoadingTests
 
         // Assert -----
         result.Units.Should().NotBeNull();
-        // This assertion should fail until we add the check to IsValidUnit
+        // This assertion should now pass because the IsValidUnit check for WeaponType exists
+        // and the validUnit now also passes the DriveType check.
         result.Units.Should().BeEquivalentTo(expectedUnits, options => options.WithStrictOrdering());
     }
 
