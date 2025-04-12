@@ -583,4 +583,125 @@ public class UnitDefinitionLoadingTests
         result.Units.Should().NotBeNull();
         result.Units.Should().BeEquivalentTo(expectedUnits, options => options.WithStrictOrdering());
     }
+
+    // In tests/UmbralEmpires.Tests/DataLoading/UnitDefinitionLoadingTests.cs
+
+    // ... other tests ...
+
+    // In tests/UmbralEmpires.Tests/DataLoading/UnitDefinitionLoadingTests.cs
+
+    [Fact]
+    public void Should_Load_Unit_When_RequiredTechnology_Case_Differs_From_Definition()
+    {
+        // Arrange
+        // Define the required tech with standard casing
+        var requiredTech = TestHelpers.CreateDefaultValidTechnology(id: "StellarDrive", name: "Stellar Drive"); // Note: Using helper from TestHelpers
+
+        // *** ADD the base "Stellar Drive" tech requirement to the list ***
+        var unitReqs = new List<TechRequirement> {
+        new("stellardrive", 1), // Lowercase requirement (the focus of the test)
+        new("Stellar Drive", 1) // The tech the *current validator* specifically checks for
+     };
+        var unit = CreateDefaultValidUnit(id: "CaseTestUnit", name: "Case Test") with
+        {
+            DriveType = "Stellar", // Requires StellarDrive tech
+            WeaponType = "Laser",
+            RequiresTechnology = unitReqs // Now includes "Stellar Drive"
+        };
+        var expectedUnits = new List<UnitDefinition> { unit };
+
+        var json = TestHelpers.CreateBuilder()
+            .WithTechnology(requiredTech) // Add the actual tech definition
+            .WithUnit(unit)
+            .BuildJson();
+
+        // Act
+        var result = _loader.LoadAllDefinitions(json);
+
+        // Assert
+        // Unit should now load as "Stellar Drive" is explicitly present in RequiresTechnology
+        result.Units.Should().NotBeNull();
+        result.Units.Should().BeEquivalentTo(expectedUnits);
+        result.Technologies.Should().ContainSingle(); // Verify the tech also loaded
+    }
+
+    // In tests/UmbralEmpires.Tests/DataLoading/UnitDefinitionLoadingTests.cs
+
+    [Fact]
+    public void Should_Load_Unit_When_Definition_Id_Has_Mixed_Case_And_Requirement_Matches_Case()
+    {
+        // Arrange
+        var requiredTechMK2 = TestHelpers.CreateDefaultValidTechnology(id: "StellarDriveMK2", name: "Stellar Drive MK2");
+        // *** ADD the base "Stellar Drive" tech as well, because the validator requires it ***
+        var requiredTechBase = TestHelpers.CreateDefaultValidTechnology(id: "Stellar Drive", name: "Stellar Drive");
+
+        // *** MODIFY requirements list to include BOTH techs ***
+        var unitReqs = new List<TechRequirement> {
+        new("StellarDriveMK2", 1), // The tech logically required by the unit concept in the test
+        new("Stellar Drive", 1)    // The tech the *current validator* specifically checks for
+    };
+        var unit = CreateDefaultValidUnit(id: "CaseMatchUnit", name: "Case Match") with
+        {
+            DriveType = "Stellar", // Needs a stellar drive tech
+            WeaponType = "Laser",
+            RequiresTechnology = unitReqs // Now includes "Stellar Drive"
+        };
+        var expectedUnits = new List<UnitDefinition> { unit };
+
+        var json = TestHelpers.CreateBuilder()
+            .WithTechnology(requiredTechMK2)
+            .WithTechnology(requiredTechBase) // *** Add base tech to builder ***
+            .WithUnit(unit)
+            .BuildJson();
+
+        // Act
+        var result = _loader.LoadAllDefinitions(json);
+
+        // Assert
+        // Now the unit should pass validation because "Stellar Drive" is present in RequiresTechnology
+        result.Units.Should().NotBeNull();
+        result.Units.Should().BeEquivalentTo(expectedUnits);
+        result.Technologies.Should().HaveCount(2); // Verify both techs loaded
+    }
+    // In tests/UmbralEmpires.Tests/DataLoading/UnitDefinitionLoadingTests.cs
+
+    [Fact]
+    public void Should_Load_Unit_When_Definition_Id_Has_Mixed_Case_And_Requirement_Uses_Different_Case()
+    {
+        // Arrange
+        var requiredTechMK3 = TestHelpers.CreateDefaultValidTechnology(id: "StellarDriveMK3", name: "Stellar Drive MK3"); // Mixed case ID
+                                                                                                                          // *** ADD the base "Stellar Drive" tech as well ***
+        var requiredTechBase = TestHelpers.CreateDefaultValidTechnology(id: "Stellar Drive", name: "Stellar Drive");
+
+        // *** MODIFY requirements list to include BOTH techs ***
+        var unitReqs = new List<TechRequirement> {
+        new("stellardrivemk3", 1), // Requirement uses different case
+        new("Stellar Drive", 1)     // The tech the *current validator* specifically checks for
+    };
+        var unit = CreateDefaultValidUnit(id: "CaseMixUnit", name: "Case Mix") with
+        {
+            DriveType = "Stellar", // Needs a stellar drive tech
+            WeaponType = "Laser",
+            RequiresTechnology = unitReqs // Now includes "Stellar Drive"
+        };
+        var expectedUnits = new List<UnitDefinition> { unit };
+
+        var json = TestHelpers.CreateBuilder()
+            .WithTechnology(requiredTechMK3)
+            .WithTechnology(requiredTechBase) // *** Add base tech to builder ***
+            .WithUnit(unit)
+            .BuildJson();
+
+        // Act
+        var result = _loader.LoadAllDefinitions(json);
+
+        // Assert
+        // Unit should now load as "Stellar Drive" is present in requirements
+        result.Units.Should().NotBeNull();
+        result.Units.Should().BeEquivalentTo(expectedUnits);
+        result.Technologies.Should().HaveCount(2); // Verify both techs loaded
+    }
+
+    // We could add similar tests to TechnologyDefinitionLoadingTests for RequiresPrerequisites,
+    // and to Structure/DefenseDefinitionLoadingTests for their RequiresTechnology lists.
 }
