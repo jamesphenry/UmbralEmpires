@@ -126,10 +126,18 @@ public class JsonDefinitionLoader : IDefinitionLoader
             }
         }
 
-        if (string.IsNullOrWhiteSpace(unit.DriveType)) return false;
-        // ---> ADD THIS CHECK <---
+        // ---> MODIFY DriveType Check <---
+        // Define valid drive types
+        var validDriveTypes = new HashSet<string> { "Interceptor", "Stellar", "Warp" };
+        if (string.IsNullOrWhiteSpace(unit.DriveType) || !validDriveTypes.Contains(unit.DriveType))
+        {
+            // Optional: Log warning about unknown drive type
+            // Console.WriteLine($"Warning: Skipping unit ID '{unit.Id}' due to unknown DriveType: {unit.DriveType}");
+            return false;
+        }
+        // ---> END MODIFIED CHECK <---
+
         if (string.IsNullOrWhiteSpace(unit.WeaponType)) return false;
-        // ---> END ADDED CHECK <---
 
         // Add more checks later based on tests...
         return true;
