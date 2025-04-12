@@ -79,16 +79,39 @@ public class JsonDefinitionLoader : IDefinitionLoader
         return true;
     }
 
-    // --- NEW HELPER METHOD (Placeholder) ---
     private bool IsValidTechnology(TechnologyDefinition? tech)
     {
         if (tech == null) return false;
         if (string.IsNullOrWhiteSpace(tech.Id)) return false;
         if (string.IsNullOrWhiteSpace(tech.Name)) return false;
-        if (tech.CreditsCost < 0) return false; // Costs should be non-negative
-        if (tech.RequiredLabsLevel < 0) return false; // Level should be non-negative
-                                                      // Add more checks (e.g., validate prerequisite IDs exist?) later
-        return true;
+        if (tech.CreditsCost < 0) return false;
+        if (tech.RequiredLabsLevel < 0) return false;
+        if (tech.RequiresPrerequisites != null) // Check if list exists
+        {
+            foreach (var requirement in tech.RequiresPrerequisites)
+            {
+                if (requirement == null) // Check if requirement object itself is null
+                {
+                    Console.WriteLine($"Warning: Skipping tech ID '{tech.Id}' due to null prerequisite object.");
+                    return false;
+                }
+                // Check for invalid TechId (from previous test)
+                if (string.IsNullOrWhiteSpace(requirement.TechId))
+                {
+                    Console.WriteLine($"Warning: Skipping tech ID '{tech.Id}' due to invalid prerequisite TechId.");
+                    return false;
+                }
+                // ---> ADD THIS CHECK for Prerequisite Level <---
+                if (requirement.Level <= 0) // Levels must be positive
+                {
+                    Console.WriteLine($"Warning: Skipping tech ID '{tech.Id}' due to invalid prerequisite Level ({requirement.Level}) for TechId '{requirement.TechId}'.");
+                    return false; // Found an invalid prerequisite Level
+                }
+                // ---> END ADDED CHECK <---
+            }
+        }
+
+        return true; // Passes all checks
     }
 
     // Implement IsValidUnit, IsValidDefense later..
