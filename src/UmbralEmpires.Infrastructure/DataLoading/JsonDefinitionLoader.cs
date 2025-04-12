@@ -98,10 +98,8 @@ public class JsonDefinitionLoader : IDefinitionLoader
         if (unit.CreditsCost < 0) return false;
         if (unit.Attack < 0) return false;
         if (unit.Armour < 0) return false;
-
-        // ---> ADD THIS CHECK <---
         if (unit.Shield < 0) return false;
-        // ---> END ADDED CHECK <---
+        if (unit.Hangar < 0) return false;
 
         // Add more checks later based on tests...
         return true;
