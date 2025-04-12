@@ -110,13 +110,27 @@ public class JsonDefinitionLoader : IDefinitionLoader
         // Check RequiresTechnology list
         if (unit.RequiresTechnology != null)
         {
+            // Check individual requirements first
             foreach (var requirement in unit.RequiresTechnology)
             {
                 if (requirement == null) return false;
                 if (string.IsNullOrWhiteSpace(requirement.TechId)) return false;
-                if (requirement.Level <= 0) return false; // Level must be positive
+                if (requirement.Level <= 0) return false;
             }
-            // We'll add the duplicate check later
+
+            // ---> ADD THIS CHECK for Duplicate TechIDs <---
+            // Check if there are any TechIds that appear more than once
+            var hasDuplicates = unit.RequiresTechnology
+                                    .GroupBy(r => r.TechId) // Group by TechId
+                                    .Any(g => g.Count() > 1); // Check if any group has > 1 item
+
+            if (hasDuplicates)
+            {
+                // Optional: Add a warning log here if desired
+                // Console.WriteLine($"Warning: Skipping unit ID '{unit.Id}' due to duplicate required technology TechIds.");
+                return false; // Found duplicates
+            }
+            // ---> END ADDED CHECK <---
         }
 
         // Add more checks later based on tests...
