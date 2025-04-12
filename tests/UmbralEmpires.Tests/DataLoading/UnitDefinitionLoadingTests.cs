@@ -338,5 +338,33 @@ public class UnitDefinitionLoadingTests
         result.Units.Should().BeEquivalentTo(expectedUnits, options => options.WithStrictOrdering());
     }
 
+    [Fact]
+    public void Should_Skip_Unit_With_Invalid_RequiredTechnology_Level()
+    {
+        // Arrange -----
+        // Create an invalid requirement list with a Level <= 0
+        var invalidReqs = new List<TechRequirement> { new("SomeTech", 0) }; // Invalid Level
+        var invalidUnit = CreateDefaultValidUnit(id: "InvalidReqLevelUnit") with { RequiresTechnology = invalidReqs };
+
+        // Create a valid unit
+        var validReqs = new List<TechRequirement> { new("SomeTech", 1) }; // Valid Level
+        var validUnit = CreateDefaultValidUnit(id: "ValidReqLevelUnit", name: "Valid Req Level") with { RequiresTechnology = validReqs };
+        var expectedUnits = new List<UnitDefinition> { validUnit };
+
+        // Use the builder to generate JSON with both units
+        var jsonInput = TestHelpers.CreateBuilder()
+            .WithUnit(invalidUnit)
+            .WithUnit(validUnit)
+            .BuildJson();
+
+        // Act -----
+        BaseModDefinitions result = _loader.LoadAllDefinitions(jsonInput);
+
+        // Assert -----
+        result.Units.Should().NotBeNull();
+        // This assertion should fail until we add the check to IsValidUnit
+        result.Units.Should().BeEquivalentTo(expectedUnits, options => options.WithStrictOrdering());
+    }
+
     // Future unit tests...
 }
