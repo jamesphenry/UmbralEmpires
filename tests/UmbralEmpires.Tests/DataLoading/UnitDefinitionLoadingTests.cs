@@ -366,5 +366,33 @@ public class UnitDefinitionLoadingTests
         result.Units.Should().BeEquivalentTo(expectedUnits, options => options.WithStrictOrdering());
     }
 
+    [Fact]
+    public void Should_Skip_Unit_With_Duplicate_RequiredTechnology_TechIds()
+    {
+        // Arrange -----
+        // Create an invalid requirement list with duplicate TechIds
+        var invalidReqs = new List<TechRequirement> { new("DupTech", 1), new("DupTech", 2) }; // Duplicate "DupTech"
+        var invalidUnit = CreateDefaultValidUnit(id: "DuplicateReqUnit") with { RequiresTechnology = invalidReqs };
+
+        // Create a valid unit (can have multiple, just not duplicates)
+        var validReqs = new List<TechRequirement> { new("Tech1", 1), new("Tech2", 1) };
+        var validUnit = CreateDefaultValidUnit(id: "NonDuplicateReqUnit", name: "Non-Duplicate Reqs") with { RequiresTechnology = validReqs };
+        var expectedUnits = new List<UnitDefinition> { validUnit };
+
+        // Use the builder to generate JSON with both units
+        var jsonInput = TestHelpers.CreateBuilder()
+            .WithUnit(invalidUnit)
+            .WithUnit(validUnit)
+            .BuildJson();
+
+        // Act -----
+        BaseModDefinitions result = _loader.LoadAllDefinitions(jsonInput);
+
+        // Assert -----
+        result.Units.Should().NotBeNull();
+        // This assertion should fail until we add the duplicate check to IsValidUnit
+        result.Units.Should().BeEquivalentTo(expectedUnits, options => options.WithStrictOrdering());
+    }
+
     // Future unit tests...
 }
