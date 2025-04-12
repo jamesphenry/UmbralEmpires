@@ -96,9 +96,10 @@ public class JsonDefinitionLoader : IDefinitionLoader
         if (string.IsNullOrWhiteSpace(unit.Id)) return false;
         if (string.IsNullOrWhiteSpace(unit.Name)) return false;
         if (unit.CreditsCost < 0) return false;
+        if (unit.Attack < 0) return false;
 
         // ---> ADD THIS CHECK <---
-        if (unit.Attack < 0) return false;
+        if (unit.Armour < 0) return false;
         // ---> END ADDED CHECK <---
 
         // Add more checks later based on tests...
