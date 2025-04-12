@@ -107,41 +107,78 @@ public class JsonDefinitionLoader : IDefinitionLoader
         if (unit.RequiredShipyard.BaseLevel < 0) return false;
         if (unit.RequiredShipyard.OrbitalLevel < 0) return false;
 
-        // Check RequiresTechnology list
-        if (unit.RequiresTechnology != null)
+        // Check RequiresTechnology list structure first
+        bool requiresTechnologyListValid = true;
+        List<TechRequirement>? techReqs = unit.RequiresTechnology; // Cache for slightly cleaner access
+
+        if (techReqs != null)
         {
-            foreach (var requirement in unit.RequiresTechnology)
+            foreach (var requirement in techReqs)
             {
-                if (requirement == null) return false;
-                if (string.IsNullOrWhiteSpace(requirement.TechId)) return false;
-                if (requirement.Level <= 0) return false;
+                // Check for null item, invalid TechId, or invalid Level
+                if (requirement == null || string.IsNullOrWhiteSpace(requirement.TechId) || requirement.Level <= 0)
+                {
+                    requiresTechnologyListValid = false;
+                    break;
+                }
             }
 
-            var hasDuplicates = unit.RequiresTechnology
-                                    .GroupBy(r => r.TechId)
-                                    .Any(g => g.Count() > 1);
-            if (hasDuplicates)
+            // Only check for duplicates if individual items are structurally valid
+            if (requiresTechnologyListValid)
             {
-                return false;
+                var hasDuplicates = techReqs
+                                    .GroupBy(r => r.TechId, StringComparer.OrdinalIgnoreCase)
+                                    .Any(g => g.Count() > 1);
+                if (hasDuplicates)
+                {
+                    requiresTechnologyListValid = false;
+                }
             }
         }
+        // If techReqs list itself was null, requiresTechnologyListValid remains true (list structure is ok)
 
-        // ---> MODIFY DriveType Check <---
-        // Define valid drive types (using HashSet for efficiency)
+        // Fail early if the list structure was bad (null items, bad id/level, duplicates)
+        if (!requiresTechnologyListValid) return false;
+
+        // --- Drive Type and Related Tech Validation ---
+        // Define valid drive types (Corrected: using "Inter")
         var validDriveTypes = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-            { "Inter", "Stellar", "Warp" }; // Added OrdinalIgnoreCase for robustness
+            { "Inter", "Stellar", "Warp" };
 
-        if (string.IsNullOrWhiteSpace(unit.DriveType) || !validDriveTypes.Contains(unit.DriveType))
+        string? driveType = unit.DriveType; // Cache for slightly cleaner access
+
+        // Check if drive type string itself is valid
+        if (string.IsNullOrWhiteSpace(driveType) || !validDriveTypes.Contains(driveType))
         {
-            // Optional: Log warning about unknown drive type
-            // Console.WriteLine($"Warning: Skipping unit ID '{unit.Id}' due to unknown DriveType: {unit.DriveType}");
             return false;
         }
-        // ---> END MODIFIED CHECK <---
 
+        // Check specific tech requirements based on drive type
+        if (driveType.Equals("Stellar", StringComparison.OrdinalIgnoreCase))
+        {
+            // Must require "Stellar Drive" tech
+            bool requiresStellar = techReqs?.Any(req =>
+                req.TechId.Equals("Stellar Drive", StringComparison.OrdinalIgnoreCase)) ?? false;
+            if (!requiresStellar)
+            {
+                // Console.WriteLine($"Warning: Unit '{unit.Id}' has Stellar drive but is missing 'Stellar Drive' tech requirement.");
+                return false; // <<< This is the crucial check for the failing test
+            }
+        }
+        else if (driveType.Equals("Warp", StringComparison.OrdinalIgnoreCase))
+        {
+            // Placeholder for Warp Drive check - we will add this next
+            // bool requiresWarp = techReqs?.Any(req => ...) ?? false;
+            // if (!requiresWarp) return false; 
+        }
+        // No specific *drive* tech needed for "Inter" drive type based on current understanding
+
+        // --- End Drive Type Checks ---
+
+        // Check Weapon Type (IsNullOrWhiteSpace check seems sufficient for now)
         if (string.IsNullOrWhiteSpace(unit.WeaponType)) return false;
 
-        // Add more checks later based on tests...
+        // If all checks passed, the unit is considered valid for loading
         return true;
     }
 
