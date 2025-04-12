@@ -79,6 +79,7 @@ public class JsonDefinitionLoader : IDefinitionLoader
         return true;
     }
 
+    // Current IsValidTechnology method
     private bool IsValidTechnology(TechnologyDefinition? tech)
     {
         if (tech == null) return false;
@@ -86,29 +87,29 @@ public class JsonDefinitionLoader : IDefinitionLoader
         if (string.IsNullOrWhiteSpace(tech.Name)) return false;
         if (tech.CreditsCost < 0) return false;
         if (tech.RequiredLabsLevel < 0) return false;
-        if (tech.RequiresPrerequisites != null) // Check if list exists
+
+        if (tech.RequiresPrerequisites != null)
         {
+            // Check individual prerequisites first
             foreach (var requirement in tech.RequiresPrerequisites)
             {
-                if (requirement == null) // Check if requirement object itself is null
-                {
-                    Console.WriteLine($"Warning: Skipping tech ID '{tech.Id}' due to null prerequisite object.");
-                    return false;
-                }
-                // Check for invalid TechId (from previous test)
-                if (string.IsNullOrWhiteSpace(requirement.TechId))
-                {
-                    Console.WriteLine($"Warning: Skipping tech ID '{tech.Id}' due to invalid prerequisite TechId.");
-                    return false;
-                }
-                // ---> ADD THIS CHECK for Prerequisite Level <---
-                if (requirement.Level <= 0) // Levels must be positive
-                {
-                    Console.WriteLine($"Warning: Skipping tech ID '{tech.Id}' due to invalid prerequisite Level ({requirement.Level}) for TechId '{requirement.TechId}'.");
-                    return false; // Found an invalid prerequisite Level
-                }
-                // ---> END ADDED CHECK <---
+                if (requirement == null) return false;
+                if (string.IsNullOrWhiteSpace(requirement.TechId)) return false;
+                if (requirement.Level <= 0) return false;
             }
+
+            // ---> ADD THIS CHECK for Duplicate Prerequisite TechIDs <---
+            // Check if there are any TechIds that appear more than once in the list
+            var hasDuplicates = tech.RequiresPrerequisites
+                                    .GroupBy(r => r.TechId) // Group by TechId
+                                    .Any(g => g.Count() > 1); // Check if any group has more than one item
+
+            if (hasDuplicates)
+            {
+                Console.WriteLine($"Warning: Skipping tech ID '{tech.Id}' due to duplicate prerequisite TechIds."); // Optional warning
+                return false; // Found duplicates
+            }
+            // ---> END ADDED CHECK <---
         }
 
         return true; // Passes all checks

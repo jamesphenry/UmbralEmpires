@@ -177,6 +177,76 @@ public class TechnologyDefinitionLoadingTests
         // Assert.True(false, "Verify implementation skips techs with invalid prerequisite levels.");
     }
 
+    [Fact]
+    public void Should_Skip_Technology_With_Null_Entry_In_Prerequisites_List()
+    {
+        // Arrange -----
+        // Need to craft JSON manually for this case, as builder likely won't add nulls
+        var jsonInput = """
+        {
+          "Structures": [],
+          "Technologies": [
+            {
+              "Id": "TechWithNullReq",
+              "Name": "Tech With Null Req",
+              "CreditsCost": 10,
+              "RequiredLabsLevel": 1,
+              "RequiresPrerequisites": [ null ]
+            },
+            {
+              "Id": "ValidTechAlongsideNull",
+              "Name": "Valid Tech Alongside Null",
+              "CreditsCost": 20,
+              "RequiredLabsLevel": 1,
+              "RequiresPrerequisites": []
+            }
+          ]
+        }
+        """;
+
+        var validTech = CreateDefaultValidTechnology(id: "ValidTechAlongsideNull", name: "Valid Tech Alongside Null", cost: 20, labs: 1);
+        var expectedTechnologies = new List<TechnologyDefinition> { validTech }; // Only expect the valid one
+
+        // Act -----
+        BaseModDefinitions result = _loader.LoadAllDefinitions(jsonInput);
+
+        // Assert -----
+        result.Technologies.Should().NotBeNull();
+        result.Technologies.Should().BeEquivalentTo(expectedTechnologies); // Implicitly checks count and content
+
+        // --- TEMPORARY Assert if needed ---
+        // Assert.True(false, "Verify implementation skips techs with null prerequisite entries.");
+    }
+
+    [Fact]
+    public void Should_Skip_Technology_With_Duplicate_Prerequisite_TechIds()
+    {
+        // Arrange -----
+        // Invalid tech requires Energy twice (different levels, but same ID)
+        var invalidPrereqs = new List<TechRequirement> { new("Energy", 1), new("Energy", 2) };
+        var invalidTech = CreateDefaultValidTechnology(id: "DupReqTech") with { RequiresPrerequisites = invalidPrereqs };
+
+        var validTech = CreateDefaultValidTechnology(id: "ValidTechAgain", cost: 50); // A second, valid tech
+        var expectedTechnologies = new List<TechnologyDefinition> { validTech }; // Only expect the valid one
+
+        // Use the builder to generate JSON with both techs
+        var jsonInput = TestHelpers.CreateBuilder()
+            .WithTechnology(invalidTech)
+            .WithTechnology(validTech)
+            .BuildJson();
+
+        // Act -----
+        BaseModDefinitions result = _loader.LoadAllDefinitions(jsonInput);
+
+        // Assert -----
+        result.Technologies.Should().NotBeNull();
+        result.Technologies.Should().BeEquivalentTo(expectedTechnologies); // Implicitly checks count and content
+
+        // --- TEMPORARY Assert if needed ---
+        // Assert.True(false, "Verify implementation skips techs with duplicate prerequisite TechIds.");
+    }
+
+
     // --- Add more tests for technologies ---
     // - Loading multiple techs
     // - Skipping techs with missing Id/Name
