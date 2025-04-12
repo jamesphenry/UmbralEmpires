@@ -512,5 +512,32 @@ public class UnitDefinitionLoadingTests
         result.Units.Should().BeEquivalentTo(expectedUnits, options => options.WithStrictOrdering());
     }
 
+    [Fact]
+    public void Should_Load_Unit_Description()
+    {
+        // Arrange -----
+        var expectedDescription = "This is a test unit description.";
+        // Create a valid unit, ensuring Drive/Weapon types are valid, and set the description
+        var expectedUnit = CreateDefaultValidUnit(id: "DescUnit") with
+        {
+            DriveType = "Stellar",
+            WeaponType = "Laser",
+            Description = expectedDescription
+        };
+        var expectedUnits = new List<UnitDefinition> { expectedUnit };
+
+        // Use the builder to generate JSON
+        var jsonInput = TestHelpers.CreateBuilder()
+            .WithUnit(expectedUnit) // Add the unit with the description
+            .BuildJson();
+
+        // Act -----
+        BaseModDefinitions result = _loader.LoadAllDefinitions(jsonInput);
+
+        // Assert -----
+        result.Units.Should().NotBeNull();
+        result.Units.Should().ContainSingle(); // Ensure only one unit was loaded
+        result.Units[0].Description.Should().Be(expectedDescription); // Check the description specifically
+    }
     // Future unit tests...
 }
