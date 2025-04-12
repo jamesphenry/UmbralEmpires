@@ -310,5 +310,33 @@ public class UnitDefinitionLoadingTests
         result.Units.Should().BeEquivalentTo(expectedUnits, options => options.WithStrictOrdering());
     }
 
+    [Fact]
+    public void Should_Skip_Unit_With_Invalid_RequiredTechnology_TechId()
+    {
+        // Arrange -----
+        // Create an invalid requirement list with an empty TechId
+        var invalidReqs = new List<TechRequirement> { new("", 1) }; // Invalid TechId
+        var invalidUnit = CreateDefaultValidUnit(id: "InvalidReqTechIdUnit") with { RequiresTechnology = invalidReqs };
+
+        // Create a valid unit
+        var validReqs = new List<TechRequirement> { new("ValidTech", 1) };
+        var validUnit = CreateDefaultValidUnit(id: "ValidReqTechIdUnit", name: "Valid Req TechId") with { RequiresTechnology = validReqs };
+        var expectedUnits = new List<UnitDefinition> { validUnit };
+
+        // Use the builder to generate JSON with both units
+        var jsonInput = TestHelpers.CreateBuilder()
+            .WithUnit(invalidUnit)
+            .WithUnit(validUnit)
+            .BuildJson();
+
+        // Act -----
+        BaseModDefinitions result = _loader.LoadAllDefinitions(jsonInput);
+
+        // Assert -----
+        result.Units.Should().NotBeNull();
+        // This assertion should fail until we add the check to IsValidUnit
+        result.Units.Should().BeEquivalentTo(expectedUnits, options => options.WithStrictOrdering());
+    }
+
     // Future unit tests...
 }
