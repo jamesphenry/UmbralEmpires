@@ -63,6 +63,26 @@ public class TechnologyDefinitionLoadingTests
         );
     }
 
+    [Fact]
+    public void LoadAllDefinitions_Should_Load_Single_Simple_Technology()
+    {
+        // Arrange
+        var expected = CreateDefaultValidTechnology(id: "Energy", name: "Energy", cost: 2, labs: 1) with { Description = "Increases all bases energy output by 5%." };
+
+        // Act & Assert using static helper
+        TestHelpers.TestSingleDefinitionProperty<TechnologyDefinition>(
+            _loader, TestHelpers.CreateBuilder(), expected,
+            b => b.WithTechnology(expected), // Use WithTechnology
+            r => r.Technologies             // Select Technologies list
+        );
+
+        // Additionally verify Structures list is empty
+        var builder = TestHelpers.CreateBuilder().WithTechnology(expected);
+        var jsonInput = builder.BuildJson();
+        BaseModDefinitions result = _loader.LoadAllDefinitions(jsonInput);
+        result.Structures.Should().BeEmpty();
+    }
+
     // --- Add more tests for technologies ---
     // - Loading multiple techs
     // - Skipping techs with missing Id/Name
