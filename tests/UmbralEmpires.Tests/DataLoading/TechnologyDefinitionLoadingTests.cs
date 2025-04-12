@@ -83,6 +83,33 @@ public class TechnologyDefinitionLoadingTests
         result.Structures.Should().BeEmpty();
     }
 
+    [Fact]
+    public void Should_Skip_Technology_With_Negative_Cost()
+    {
+        // Arrange -----
+        var invalidTech = CreateDefaultValidTechnology(id: "NegCostTech", cost: -100);
+        var validTech = CreateDefaultValidTechnology(id: "PosCostTech", cost: 100);
+        var expectedTechnologies = new List<TechnologyDefinition> { validTech }; // Only expect the valid one
+
+        // Use the builder to generate JSON with both techs
+        var jsonInput = TestHelpers.CreateBuilder()
+            .WithTechnology(invalidTech)
+            .WithTechnology(validTech)
+            .BuildJson();
+
+        // Act -----
+        BaseModDefinitions result = _loader.LoadAllDefinitions(jsonInput);
+
+        // Assert -----
+        result.Technologies.Should().NotBeNull();
+        result.Technologies.Should().BeEquivalentTo(expectedTechnologies); // Implicitly checks count and content
+
+        // --- TEMPORARY Assert if needed ---
+        // Assert.True(false, "Verify implementation skips techs with negative cost.");
+    }
+
+
+
     // --- Add more tests for technologies ---
     // - Loading multiple techs
     // - Skipping techs with missing Id/Name

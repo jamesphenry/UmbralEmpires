@@ -1,5 +1,3 @@
-# .github/workflows/dotnet.yml
-
 name: .NET Build, Test, and Update Detailed README Report
 
 on:
@@ -108,7 +106,26 @@ jobs:
                   -replace "`n","<br>" `
                   -replace "`r",""
               }
-              $detailedReport += "| $($shortName -replace '\|','\|') | $testOutcome | $durationMs | $errorMessage |`n"
+
+              # 🔍 Find method line number and build link
+              $testFile = $fileMatch.FullName
+              $methodLine = 0
+              $methodLink = $fileUrl
+              try {
+                $methodMatch = Select-String -Path $testFile -Pattern "^\s*\[Fact.*\]\s*\n*\s*.*\s$shortName\s*\(" -Context 0,2 | Select-Object -First 1
+                if (-not $methodMatch) {
+                  $methodMatch = Select-String -Path $testFile -Pattern "^\s*public\s+.*\s$shortName\s*\(" | Select-Object -First 1
+                }
+                if ($methodMatch) {
+                  $methodLine = $methodMatch.LineNumber
+                  $relativePath = $testFile -replace '\\','/' -replace '^.*?/', ''
+                  $methodLink = "$githubRepoUrl/blob/main/$relativePath#L$methodLine"
+                }
+              } catch {
+                Write-Host "Unable to locate method $shortName in $testFile"
+              }
+
+              $detailedReport += "| [$($shortName -replace '\|','\|')]($methodLink) | $testOutcome | $durationMs | $errorMessage |`n"
             }
           }
         } else {
