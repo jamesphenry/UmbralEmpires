@@ -454,7 +454,6 @@ public class UnitDefinitionLoadingTests
     public void Should_Skip_Unit_With_Null_Entry_In_RequiresTechnology() // Requires manual JSON
     {
         // Arrange -----
-        // Define JSON manually to include a null in the list
         var jsonInput = """
         {
           "Structures": [],
@@ -468,7 +467,7 @@ public class UnitDefinitionLoadingTests
               "Armour": 1, 
               "Shield": 0, 
               "Hangar": 0, 
-              "Speed": 1,
+              "Speed": 1, // Speed is 1 in JSON
               "DriveType": "Stellar", 
               "WeaponType": "Laser", 
               "RequiredShipyard": { "BaseLevel": 1, "OrbitalLevel": 0 },
@@ -482,7 +481,7 @@ public class UnitDefinitionLoadingTests
               "Armour": 1, 
               "Shield": 0, 
               "Hangar": 0, 
-              "Speed": 1,
+              "Speed": 1, // Speed is 1 in JSON
               "DriveType": "Stellar", 
               "WeaponType": "Laser",
               "RequiredShipyard": { "BaseLevel": 1, "OrbitalLevel": 0 },
@@ -492,14 +491,15 @@ public class UnitDefinitionLoadingTests
         }
         """;
 
-        // Define the expected valid unit
+        // Define the expected valid unit - MAKE SURE IT MATCHES THE JSON
         var validUnit = CreateDefaultValidUnit(id: "ValidUnitAlongsideNull", name: "V") with
         {
             DriveType = "Stellar",
             WeaponType = "Laser",
             Attack = 1,
-            Armour = 1
-            // Other properties will use defaults from CreateDefaultValidUnit or the record itself
+            Armour = 1,
+            Speed = 1 // <<< ENSURE Speed MATCHES JSON
+                      // Other properties like Shield, Hangar, Cost will use defaults (0, 0, 1) which match JSON
         };
         var expectedUnits = new List<UnitDefinition> { validUnit };
 
@@ -508,7 +508,7 @@ public class UnitDefinitionLoadingTests
 
         // Assert -----
         result.Units.Should().NotBeNull();
-        // This assertion should PASS because the null check exists in IsValidUnit
+        // This assertion should now PASS
         result.Units.Should().BeEquivalentTo(expectedUnits, options => options.WithStrictOrdering());
     }
 
