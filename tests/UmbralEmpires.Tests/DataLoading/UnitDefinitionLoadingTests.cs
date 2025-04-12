@@ -539,5 +539,39 @@ public class UnitDefinitionLoadingTests
         result.Units.Should().ContainSingle(); // Ensure only one unit was loaded
         result.Units[0].Description.Should().Be(expectedDescription); // Check the description specifically
     }
+
+    [Fact]
+    public void Should_Skip_Unit_With_Unknown_DriveType()
+    {
+        // Arrange -----
+        // Create an invalid unit with an unrecognized DriveType
+        var invalidUnit = CreateDefaultValidUnit(id: "UnknownDriveUnit") with
+        {
+            DriveType = "Hyperdrive", // Invalid type
+            WeaponType = "Laser" // Ensure WeaponType is valid
+        };
+
+        // Create a valid unit
+        var validUnit = CreateDefaultValidUnit(id: "KnownDriveUnit", name: "Known Drive") with
+        {
+            DriveType = "Stellar", // Known valid type
+            WeaponType = "Laser"
+        };
+        var expectedUnits = new List<UnitDefinition> { validUnit };
+
+        // Use the builder to generate JSON with both units
+        var jsonInput = TestHelpers.CreateBuilder()
+            .WithUnit(invalidUnit)
+            .WithUnit(validUnit)
+            .BuildJson();
+
+        // Act -----
+        BaseModDefinitions result = _loader.LoadAllDefinitions(jsonInput);
+
+        // Assert -----
+        result.Units.Should().NotBeNull();
+        // This assertion should fail until we modify IsValidUnit
+        result.Units.Should().BeEquivalentTo(expectedUnits, options => options.WithStrictOrdering());
+    }
     // Future unit tests...
 }
