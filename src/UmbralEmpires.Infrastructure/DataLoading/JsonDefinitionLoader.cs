@@ -107,14 +107,14 @@ public class JsonDefinitionLoader : IDefinitionLoader
         if (unit.RequiredShipyard.BaseLevel < 0) return false;
         if (unit.RequiredShipyard.OrbitalLevel < 0) return false;
 
-        if (unit.RequiresTechnology != null) // Check if the list itself exists
+        // Check RequiresTechnology list
+        if (unit.RequiresTechnology != null)
         {
-            // Check individual requirements in the list
             foreach (var requirement in unit.RequiresTechnology)
             {
-                if (requirement == null) return false; // Check for null entries in the list
-                if (string.IsNullOrWhiteSpace(requirement.TechId)) return false; // Check TechId
-                // We'll add the Level check in the next cycle
+                if (requirement == null) return false;
+                if (string.IsNullOrWhiteSpace(requirement.TechId)) return false;
+                if (requirement.Level <= 0) return false; // Level must be positive
             }
             // We'll add the duplicate check later
         }
