@@ -58,5 +58,30 @@ public class UnitDefinitionLoadingTests
         // Assert.True(false, "Implement Unit loading.");
     }
 
+    [Fact]
+    public void Should_Skip_Unit_With_Negative_Cost()
+    {
+        // Arrange -----
+        var invalidUnit = CreateDefaultValidUnit(id: "NegCostUnit", cost: -100);
+        var validUnit = CreateDefaultValidUnit(id: "PosCostUnit", cost: 100);
+        var expectedUnits = new List<UnitDefinition> { validUnit }; // Only expect the valid one
+
+        // Use the builder to generate JSON with both units
+        var jsonInput = TestHelpers.CreateBuilder()
+            .WithUnit(invalidUnit)
+            .WithUnit(validUnit)
+            .BuildJson();
+
+        // Act -----
+        BaseModDefinitions result = _loader.LoadAllDefinitions(jsonInput);
+
+        // Assert -----
+        result.Units.Should().NotBeNull();
+        result.Units.Should().BeEquivalentTo(expectedUnits); // Implicitly checks count and content
+
+        // --- TEMPORARY Assert if needed ---
+        // Assert.True(false, "Verify implementation skips units with negative cost.");
+    }
+
     // Future unit tests...
 }
