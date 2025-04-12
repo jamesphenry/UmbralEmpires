@@ -283,5 +283,32 @@ public class UnitDefinitionLoadingTests
         result.Units.Should().BeEquivalentTo(expectedUnits, options => options.WithStrictOrdering());
     }
 
+    [Fact]
+    public void Should_Skip_Unit_With_Negative_RequiredShipyard_OrbitalLevel()
+    {
+        // Arrange -----
+        // Create an invalid unit with a negative OrbitalLevel in RequiredShipyard
+        var invalidRequirement = new ShipyardRequirement(BaseLevel: 1, OrbitalLevel: -1); // Negative OrbitalLevel
+        var invalidUnit = CreateDefaultValidUnit(id: "InvalidSYOrbitalUnit") with { RequiredShipyard = invalidRequirement };
+        // Create a valid unit
+        var validRequirement = new ShipyardRequirement(BaseLevel: 1, OrbitalLevel: 0); // Valid OrbitalLevel
+        var validUnit = CreateDefaultValidUnit(id: "ValidSYOrbitalUnit", name: "Valid SY Orbital") with { RequiredShipyard = validRequirement };
+        var expectedUnits = new List<UnitDefinition> { validUnit };
+
+        // Use the builder to generate JSON with both units
+        var jsonInput = TestHelpers.CreateBuilder()
+            .WithUnit(invalidUnit)
+            .WithUnit(validUnit)
+            .BuildJson();
+
+        // Act -----
+        BaseModDefinitions result = _loader.LoadAllDefinitions(jsonInput);
+
+        // Assert -----
+        result.Units.Should().NotBeNull();
+        // This assertion should fail until we add the check to IsValidUnit
+        result.Units.Should().BeEquivalentTo(expectedUnits, options => options.WithStrictOrdering());
+    }
+
     // Future unit tests...
 }
